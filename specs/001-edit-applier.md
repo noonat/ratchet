@@ -1,5 +1,5 @@
 ---
-status: ready
+status: active
 created: 2026-08-19T15:00:00Z
 updated: 2026-08-19T16:44:24.179226194Z
 required_commands:
@@ -146,21 +146,24 @@ Iteration 1 writes the Makefile, so closing it is the first proof the gate runs.
 
 ## Iteration 1: the module and the anchor package
 
-- [ ] Create `go.mod` for module `ratchet` on Go 1.26, and a `Makefile` with the
+- [x] Create `go.mod` for module `ratchet` on Go 1.26, and a `Makefile` with the
       targets `help build clean fmt lint test check` and `help` as the default,
       matching the measurement harness. Iteration 4 adds `corpus`, which is not
       part of `check`
-- [ ] Write `internal/anchor/anchor.go` with `Normalize(text string) string`,
+- [x] Write `internal/anchor/anchor.go` with `Normalize(text string) string`,
       which strips trailing whitespace per line and converts CRLF to LF, and
       `Tag(text string) string`, which returns four uppercase hex digits
-- [ ] Pin `Tag` in `internal/anchor/anchor_test.go` against the vectors already
+- [x] Pin `Tag` in `internal/anchor/anchor_test.go` against the vectors already
       checked against the reference library in the measurement harness's own
       tests, and assert that a CRLF copy and a trailing-whitespace copy of the
       same file produce the same tag
-- [ ] Add `Snapshot{Tag string; Text string; Lines map[int]bool}` and
+- [x] Add `Snapshot{Tag string; Text string; Lines map[int]bool}` and
       `Mint(text string, lines []int) Snapshot`, and test that a partial read
       records only the lines it displayed
 
+> **Completed** 2026-08-19 16:47 UTC
+>
+> - `make check` — 265ms
 
 ## Iteration 2: the patch language, parsed
 
