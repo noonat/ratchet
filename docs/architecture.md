@@ -979,6 +979,22 @@ for all three. Without the error the model misdiagnoses, without its own attempt
 it reissues the same edit, without the current content it edits against a memory
 from four turns ago.
 
+### Two forms that measured well are not used
+
+`SUB N: OLD => NEW` tops a production-reliability table and is rejected.
+Instructed to edit a line that already contains `=>`, the strongest model
+available mis-split it and applied a corrupted result 20 times in 26. A
+delimiter that can also appear in content is not a delimiter, and the failure is
+silent: the form looks like the best one right up to the case that breaks it.
+
+A leading `-` or `+` in content is carried behind a sigil and written once, not
+doubled. Across 122 changelog lines beginning at column zero with a dash,
+`put_sigil` was wrong 57 times in 200, and one model swallowed the dash 49 times
+in 50. One row, valid sigil, correct address, well-formed reply, and the bullet
+loses its bullet. No repair reaches that and no syntax gate catches it.
+Verifying the replaced row does, which turns the swallow into a refusal and is
+why the checked form is the portable one.
+
 ### bash
 
 The only tool that enters the container.
