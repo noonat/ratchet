@@ -167,24 +167,28 @@ Iteration 1 writes the Makefile, so closing it is the first proof the gate runs.
 
 ## Iteration 2: the patch language, parsed
 
-- [ ] Write `internal/patch/parse.go` producing
+- [x] Write `internal/patch/parse.go` producing
       `Patch{Path, Tag string; Hunks []Hunk}` and
       `Hunk{Line, End int; Old, New []string; Kind}` from the two forms that
       measured best: `PUT N.=M:` followed by a `-` row and a `+` row, and
       `SUB N:` followed by `-old` and `+new`
-- [ ] Refuse instead of guessing. Return a typed error that names the problem
+- [x] Refuse instead of guessing. Return a typed error that names the problem
       for a reply that will not parse, a hunk missing its `-` or `+` row, and a
       reply carrying more hunks than the caller asked for
-- [ ] Implement the doubling rule, which writes a literal leading `-` or `+` in
+- [x] Implement the doubling rule, which writes a literal leading `-` or `+` in
       content twice. Test the case no repair can catch: content whose first
       character is a dash, where dropping that dash still parses and silently
       loses it
-- [ ] Write `internal/patch/repair.go` with the two measured repairs, each
+- [x] Write `internal/patch/repair.go` with the two measured repairs, each
       switchable on its own. Accept body rows that all lack their leading `+`,
       provided none of them starts with `-` or `+`. Re-indent a single-line
       replacement from the line it replaces, except where whitespace matters
-- [ ] Write table-driven tests for both repairs, including the Python case where
+- [x] Write table-driven tests for both repairs, including the Python case where
       re-indenting must be refused
+
+> **Completed** 2026-08-19 21:00 UTC
+>
+> - `make check` — 411ms
 
 ## Iteration 3: resolve, apply, refuse
 

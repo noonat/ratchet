@@ -21,6 +21,34 @@ not become work it tracks.
 
 ## Divergences from the spec
 
+- Iteration 2's todo asks for a doubling rule that "writes a literal leading `-`
+  or `+` in content twice". The parser does not double, because the format that
+  was measured does not either. The probe's own prompt said "`- item` becomes
+  `+- item`", which is a sigil followed by a literal dash, and its scorer
+  accepted that. Doubling would have produced a parser disagreeing with every
+  reply in the corpus. The name is wrong in the probe comments, the probe prompt
+  and the spec; correcting the probe prompt changes its hash, so it waits until
+  no run depends on it.
+
+- Iteration 2's todos ask for two repairs. There is one. Filling in a missing
+  sigil was measured on `put_sigil`, whose body rows are all additions, so a
+  bare row there can only mean one thing. This parser reads a form with an old
+  row and a new row, and a body of bare rows does not say which is which;
+  inferring it would be the guess the old-line check exists to prevent, and
+  `put_sigil` was rejected for corrupting thirty times as often. The 64% to 99%
+  figure belongs to a form Ratchet does not use. A corrective turn covers the
+  same failure at a price that is known: it recovers 221 of 494 diagnosed
+  failures and turns 35 into wrong ones. The repair's price is not known,
+  because guessing which row is which lands silently.
+
+  If some model's replies in this form arrive all-bare often, the form is wrong
+  for that model and qualification should choose another one for it. A repair
+  there would hide a model-and-form mismatch that qualification exists to find.
+
+- The re-indent repair runs when a patch is applied, not when it is parsed: it
+  needs the line being replaced, and only the applier has read the file. It is
+  written and tested and nothing calls it until iteration 3.
+
 - Iteration 1's todo asks for `Snapshot{... Lines map[int]bool}`. The code uses
   `map[int]struct{}`, because a bool implies `false` means something. The todo
   is closed, so it stays as written; iteration 6's documentation todo is where
