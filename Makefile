@@ -38,6 +38,13 @@ lint: ## gofmt, vet, staticcheck
 		exit 1; \
 	}
 	staticcheck $(PKGS)
+	@cp go.mod go.mod.tidycheck && cp go.sum go.sum.tidycheck; \
+	go mod tidy; \
+	if ! cmp -s go.mod go.mod.tidycheck || ! cmp -s go.sum go.sum.tidycheck; then \
+		mv go.mod.tidycheck go.mod; mv go.sum.tidycheck go.sum; \
+		echo "go.mod or go.sum is not tidy (run: go mod tidy)"; exit 1; \
+	fi; \
+	rm -f go.mod.tidycheck go.sum.tidycheck
 
 .PHONY: test
 test: ## run the tests
