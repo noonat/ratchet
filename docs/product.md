@@ -1,9 +1,9 @@
 # Ratchet
 
 _A product document written as if it shipped. None of it exists yet. How it is
-built: [architecture.md](architecture.md). What has since
-been measured, and what is still unvalidated, are recorded in the research notes
-that preceded this repo._
+built: [architecture.md](architecture.md). What has since been measured, and
+what is still unvalidated, are recorded in the research notes that preceded this
+repo._
 
 ## What Ratchet is
 

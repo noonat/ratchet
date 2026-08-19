@@ -82,8 +82,7 @@ func TestTableTestsUseSubtests(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			g := NewWithT(t)
 			g.Expect(tableTestViolations(fset, file)).
-				To(BeEmpty(), "a table's rows each run in their own t.Run, with their own "+
-					"gomega created inside the closure, so a failure names the row")
+				To(BeEmpty(), "a table's rows each run in their own t.Run, with their own gomega created inside the closure, so a failure names the row")
 		})
 	}
 }
@@ -139,8 +138,7 @@ func tableTestViolations(fset *token.FileSet, file *ast.File) []string {
 			return true
 		}
 		if len(callsOutside(closure.Body, "NewWithT")) == 0 {
-			report(closure.Pos(), "this t.Run closure asserts through a gomega made "+
-				"outside it")
+			report(closure.Pos(), "this t.Run closure asserts through a gomega made outside it")
 		}
 		return true
 	})
@@ -240,8 +238,7 @@ func TestExportedIdentifiersAreDocumented(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			g := NewWithT(t)
 			g.Expect(undocumentedExports(file)).
-				To(BeEmpty(), "exported identifier has no doc comment, or one that "+
-					"does not start with its name")
+				To(BeEmpty(), "exported identifier has no doc comment, or one that does not start with its name")
 		})
 	}
 }
@@ -299,8 +296,7 @@ func TestFunctionBodiesAreMultiLine(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			g := NewWithT(t)
 			g.Expect(oneLineFuncs(fset, file)).
-				To(BeEmpty(), "function body opens and closes on one line: put the "+
-					"statement on its own line")
+				To(BeEmpty(), "function body opens and closes on one line: put the statement on its own line")
 		})
 	}
 }
@@ -340,14 +336,12 @@ func TestTablesAreNamedNotInlined(t *testing.T) {
 		t.Run(name+"/inlined table", func(t *testing.T) {
 			g := NewWithT(t)
 			g.Expect(inlinedTables(file)).
-				To(BeEmpty(), "composite literal inlined into a range: assign it to a "+
-					"variable first, so the loop body reads without scrolling past the data")
+				To(BeEmpty(), "composite literal inlined into a range: assign it to a variable first, so the loop body reads without scrolling past the data")
 		})
 		t.Run(name+"/positional fields", func(t *testing.T) {
 			g := NewWithT(t)
 			g.Expect(unkeyedStructRows(file)).
-				To(BeEmpty(), "struct literal without field names: name every field, one "+
-					"per line, so adding a field cannot silently reassign the others")
+				To(BeEmpty(), "struct literal without field names: name every field, one per line, so adding a field cannot silently reassign the others")
 		})
 	}
 }

@@ -56,6 +56,20 @@ argument is the one place the compact form is clearer.
 comment was attached to the const block above it, where a reader looking at the
 function never sees it.
 
+**Judgement.** A struct literal that does not fit on one line puts every field
+on its own line, keyed, with a trailing comma and the brace alone:
+
+```go
+return nil, &Fault{
+    Line:   n,
+    Reason: "a body row starts with `-` or `+`",
+}
+```
+
+Not `&Fault{Line: n,` with the rest hanging below. The keyed form lets gofmt
+align the values, adding a field touches one line instead of reflowing the
+literal, and the closing brace shows where the value ends.
+
 **Judgement.** Wrap a call chain after the dot, with the chain indented, rather
 than by breaking the argument list:
 
@@ -67,6 +81,25 @@ g.Expect(Tag(changed)).
 Breaking after the opening paren separates a matcher from its message and reads
 as two statements. Long lines are acceptable in tests; a long line in production
 code usually means the expression wants a name.
+
+**Judgement.** Do not wrap to hit a margin. Go tolerates long lines, and a
+120-character call holding one argument and one string reads better whole than
+split. Never break a string constant across lines for width: the reader then has
+to reassemble the message to know what it says.
+
+Wrap when a call is genuinely long, hundreds of characters or several arguments
+worth reading separately. Then give each argument its own line, with a trailing
+comma and the paren alone:
+
+```go
+return nil, faultAt(
+    n,
+    reason,
+    hint,
+)
+```
+
+The same shape as a struct literal, for the same reasons.
 
 **Judgement.** Comments say why, not what. A comment that restates the code is
 noise; a comment naming the measurement or the incident behind a decision is the
@@ -81,6 +114,61 @@ only question the type can answer.
 **Judgement.** Vendor a dependency when it must agree byte for byte with someone
 else's implementation forever and it is small. `internal/anchor`'s xxHash32 is
 vendored for that reason and pinned against the reference library's own vectors.
+
+## Dependencies and errors
+
+Moved here from the architecture document, which describes how the system is
+shaped rather than how its code is written.
+
+**Stdlib-first.** Git is shelled out to, not linked. The third-party list is
+short and each entry is a decision with a reason.
+
+| Dependency           | Why                                               |
+| -------------------- | ------------------------------------------------- |
+| `urfave/cli/v3`      | position-independent flags; confined to `main.go` |
+| `goldmark`           | the spec parser is a real Markdown AST, not regex |
+| `yaml.v3`            | the `ratchet` blocks                              |
+| `cockroachdb/errors` | a stack at the site an error was constructed      |
+| `esbuild` (Go API)   | the index's module graph; compiles the page's TS  |
+| `htmx` (vendored JS) | fragment swaps and SSE; pinned by version, digest |
+| `gomega` (test only) | assertions                                        |
+| `tsc` (dev only)     | typechecking; the only thing that wants node      |
+
+Position-independent flags are for agents, not people.
+`ratchet ack i-b41c07 --reviewed` and `ratchet ack --reviewed i-b41c07` mean the
+same thing, and argument order is the sort of thing a model gets wrong once per
+session forever.
+
+Package-qualified, de-stuttered names. `spec.Parse`, not `spec.ParseSpec`. The
+exception is each package's namesake type, which keeps the name: `spec.Spec`,
+`anchor.Anchor`, the `context.Context` idiom, reserved for the type that is the
+package's reason to exist.
+
+A stack at the earliest possible origination point, exactly once.
+
+For a foreign error that point is the boundary where it enters this code: wrap
+it on the first line, with `errors.Wrapf` when there is context worth adding and
+`errors.WithStack` when the error already names its operation.
+`internal/sandbox` is the reference: every engine `exec` failure carries the
+command and its output.
+
+For an error originating here, that point is where the return chain starts.
+Attach the stack where the error is constructed, not where it is finally
+handled, because by then the frames that would say which of eleven return points
+produced it are gone.
+
+Bare-return anything that already carries a stack, and re-wrap only to add
+context.
+
+`wrapcheck` stays off. It flags any error crossing a package boundary unwrapped,
+which would force redundant wraps on errors that already have stacks.
+
+**Judgement.** A `Fault` carries a stack, attached where it is constructed. An
+earlier version of this file argued the opposite, on the grounds that the corpus
+replay produces thousands of faults and a stack on each is noise. That confused
+attaching a stack with printing one. The stack costs a slice of program counters
+and renders only under `%+v`, while losing it costs the one thing that says
+which of eleven return points produced the fault.
 
 ## Tests
 

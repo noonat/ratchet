@@ -1,10 +1,7 @@
 # Ratchet: architecture
 
-_Written as if the implementation shipped. None of it exists yet. The product it
-describes is [product.md](product.md); what has since been
-measured, including four corrections to this document, is
-recorded in the research notes that preceded this repo, along with what is still
-unvalidated._
+> Written as if the implementation shipped. None of it exists yet. The product
+> it describes is [product.md](product.md)
 
 ## What runs where
 
@@ -164,53 +161,8 @@ that surface is a promise and the internal model is free to change.
 
 ### Conventions
 
-**Stdlib-first.** Git is shelled out to, not linked. The third-party list is
-short and each entry is a decision with a reason.
-
-| Dependency           | Why                                               |
-| -------------------- | ------------------------------------------------- |
-| `urfave/cli/v3`      | position-independent flags; confined to `main.go` |
-| `goldmark`           | the spec parser is a real Markdown AST, not regex |
-| `yaml.v3`            | the `ratchet` blocks                              |
-| `cockroachdb/errors` | a stack at the site an error was constructed      |
-| `esbuild` (Go API)   | the index's module graph; compiles the page's TS  |
-| `htmx` (vendored JS) | fragment swaps and SSE; pinned by version, digest |
-| `gomega` (test only) | assertions                                        |
-| `tsc` (dev only)     | typechecking; the only thing that wants node      |
-
-Position-independent flags are for agents, not people.
-`ratchet ack i-b41c07 --reviewed` and `ratchet ack --reviewed i-b41c07` mean the
-same thing, and argument order is the sort of thing a model gets wrong once per
-session forever.
-
-Package-qualified, de-stuttered names. `spec.Parse`, not `spec.ParseSpec`. The
-exception is each package's namesake type, which keeps the name: `spec.Spec`,
-`anchor.Anchor`, the `context.Context` idiom, reserved for the type that is the
-package's reason to exist.
-
-A stack at every foreign boundary, exactly once. Wrap a foreign error the first
-line it enters our code, with `errors.Wrapf` when there is context worth adding
-and `errors.WithStack` when the error already names its operation. Bare-return
-our own errors and anything wrapped downstream. Re-wrap only to add context,
-never to add a stack, because it already has one. `internal/sandbox` is the
-reference: every engine `exec` failure carries the command and its output.
-
-`wrapcheck` stays off. It flags any error crossing a package boundary unwrapped,
-which would force redundant wraps on errors that already have stacks.
-
-Tests use gomega, dot-imported. Each test and subtest opens `g := NewWithT(t)`,
-binding the fail handler to that `t`, and the suite runs under `-race`. Tests
-isolated by `t.TempDir` are parallel; anything calling `t.Chdir` or `t.Setenv`,
-or capturing `os.Stdout`, stays serial.
-
-Golden tests for anything rendered. The drafting page, `--help`, the `status`
-and `list` tables, and the executor's prompt. `NO_COLOR` is forced in test
-`init()` so goldens are plain ASCII, and `t.TempDir()` paths are redacted.
-Regenerate with `-update` and read the diff, because the diff is the review.
-
-The prompt matters most. It is the highest-leverage string in the system, it is
-edited often, and a change to it invalidates every recorded cassette. A golden
-test makes that visible in the same commit rather than three runs later.
+Moved to [conventions.md](conventions.md), which is where a reader looks for how
+code is written rather than how the system is shaped.
 
 ## Storage
 
@@ -959,8 +911,9 @@ file-level tag does not need to make.
 
 ### An anchor must have been minted, not merely be correct
 
-One more precondition, and a measurement is the reason for it. **An edit is refused unless the anchor it carries was issued by
-a read in this session**, even when the anchor matches the file on disk exactly.
+One more precondition, and a measurement is the reason for it. **An edit is
+refused unless the anchor it carries was issued by a read in this session**,
+even when the anchor matches the file on disk exactly.
 
 Matching the live file sounds like proof enough, and it is not. The stale-branch
 message above names the file's current state, so a model can lift an identifier
@@ -1566,9 +1519,10 @@ is the strategy.
 A journal is a complete record of what the model saw and said. Point the
 provider at one and the loop is deterministic.
 
-Assertions use **gomega**, in plain `go test` functions rather than under ginkgo:
-`NewWithT(t)` at the top, `Expect(...).To(...)` after it. The matchers read as the
-claim being made, and a failure prints the value rather than only the line.
+Assertions use **gomega**, in plain `go test` functions rather than under
+ginkgo: `NewWithT(t)` at the top, `Expect(...).To(...)` after it. The matchers
+read as the claim being made, and a failure prints the value rather than only
+the line.
 
 ```go
 g := NewWithT(t)
