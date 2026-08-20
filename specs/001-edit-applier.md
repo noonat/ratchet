@@ -158,8 +158,8 @@ Iteration 1 writes the Makefile, so closing it is the first proof the gate runs.
       tests, and assert that a CRLF copy and a trailing-whitespace copy of the
       same file produce the same tag
 - [x] Add `Snapshot{Tag string; Text string; Lines map[int]bool}` and
-      `Mint(text string, lines []int) Snapshot`, and test that a partial read
-      records only the lines it displayed
+      `NewSnapshotForLines(text string, lines []int) Snapshot`, and test that a
+      partial read records only the lines it displayed
 
 > **Completed** 2026-08-19 16:47 UTC
 >

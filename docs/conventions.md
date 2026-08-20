@@ -392,8 +392,8 @@ ending without a newline, a blank line, and content containing the characters an
 address uses.
 
 Combine them, because the bug lives in the combination. Each of those shapes was
-covered individually and `MintAll` still lost a line, because the failing file
-was two of them at once: no trailing newline _and_ a last line holding only
+covered individually and `NewSnapshot` still lost a line, because the failing
+file was two of them at once: no trailing newline _and_ a last line holding only
 indentation. That file is routine in Python, and the lost line would have been
 refused as never displayed.
 

@@ -105,9 +105,9 @@ func TestResolveRefusalBranches(t *testing.T) {
 			g := NewWithT(t)
 			reads := anchor.NewReads()
 			if c.record {
-				snap := anchor.MintAll(served)
+				snap := anchor.NewSnapshot(served)
 				if c.partial != nil {
-					snap = anchor.Mint(served, c.partial)
+					snap = anchor.NewSnapshotForLines(served, c.partial)
 				}
 				reads.Record("a/b.ts", snap)
 			}
@@ -157,7 +157,7 @@ func TestMovedFileRefusalNamesNoAnchor(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			g := NewWithT(t)
 			reads := anchor.NewReads()
-			reads.Record("a/b.ts", anchor.MintAll(served))
+			reads.Record("a/b.ts", anchor.NewSnapshot(served))
 
 			_, err := Resolve(reads, put("a/b.ts", c.tag, 2, "two", "TWO"), moved)
 
@@ -175,7 +175,7 @@ func TestMovedFileRefusalNamesNoAnchor(t *testing.T) {
 func TestMistranscribedRefusalNamesTheAnchor(t *testing.T) {
 	g := NewWithT(t)
 	reads := anchor.NewReads()
-	reads.Record("a/b.ts", anchor.MintAll(served))
+	reads.Record("a/b.ts", anchor.NewSnapshot(served))
 
 	_, err := Resolve(reads, put("a/b.ts", "0000", 2, "two", "TWO"), served)
 
@@ -211,7 +211,7 @@ func TestTrimmedWhitespaceIsNotAMovedFile(t *testing.T) {
 				To(Equal(anchor.Tag(trailing)), "the fixture has to be one the tag calls unchanged")
 
 			reads := anchor.NewReads()
-			reads.Record("a/b.ts", anchor.MintAll(trailing))
+			reads.Record("a/b.ts", anchor.NewSnapshot(trailing))
 
 			_, err := Resolve(reads, put("a/b.ts", anchor.Tag(trailing), 2, "two", "TWO"), c.current)
 
@@ -272,7 +272,7 @@ func TestResolveRefusesAnUnusablePatch(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			g := NewWithT(t)
 			reads := anchor.NewReads()
-			reads.Record("a/b.ts", anchor.MintAll(served))
+			reads.Record("a/b.ts", anchor.NewSnapshot(served))
 
 			res, err := Apply(reads, patch.Patch{
 				Path:  "a/b.ts",

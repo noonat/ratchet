@@ -17,11 +17,11 @@ func Resolve(reads *anchor.Reads, p patch.Patch, current string) (anchor.Snapsho
 		return anchor.Snapshot{}, err
 	}
 
-	snap, issued := reads.Issued(p.Path)
-	if !issued {
+	snap, ok := reads.Snapshot(p.Path)
+	if !ok {
 		return anchor.Snapshot{}, refuse(
 			ReasonNoRead,
-			"No read in this session showed `%s`, so it cannot be edited yet. Read it first. An anchor counts only if a read here issued it, even when it matches the file.",
+			"No read in this session showed `%s`, so it cannot be edited yet. Read it first. An anchor counts only if a read here served it, even when it matches the file.",
 			p.Path,
 		)
 	}

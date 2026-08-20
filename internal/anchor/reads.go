@@ -33,8 +33,8 @@ func (r *Reads) Record(file string, s Snapshot) {
 	r.latest[pathKey(file)] = s
 }
 
-// Issued returns the snapshot a read served for a path.
-func (r *Reads) Issued(file string) (Snapshot, bool) {
+// Snapshot returns what a read served for a path, and whether one did.
+func (r *Reads) Snapshot(file string) (Snapshot, bool) {
 	s, ok := r.latest[pathKey(file)]
 	return s, ok
 }

@@ -6,13 +6,14 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// TestMintRecordsOnlyTheLinesDisplayed is the property the Lines field exists for.
-// A windowed read stamps a tag for the whole file while showing part of it, and an
-// edit to a line nobody saw is unreviewed however well-formed the anchor is.
-func TestMintRecordsOnlyTheLinesDisplayed(t *testing.T) {
+// TestNewSnapshotForLinesRecordsOnlyWhatWasShown is the property the Lines field
+// exists for. A windowed read stamps a tag for the whole file while showing part
+// of it, and an edit to a line nobody saw is unreviewed however well-formed the
+// anchor is.
+func TestNewSnapshotForLinesRecordsOnlyWhatWasShown(t *testing.T) {
 	g := NewWithT(t)
 	text := "one\ntwo\nthree\nfour\nfive\n"
-	s := Mint(text, []int{2, 3, 4})
+	s := NewSnapshotForLines(text, []int{2, 3, 4})
 
 	g.Expect(s.Tag).To(Equal(Tag(text)), "the tag must cover the text served")
 	g.Expect(s.Text).To(Equal(text), "the served text is what a mismatch is attributed against")
@@ -28,10 +29,10 @@ func TestMintRecordsOnlyTheLinesDisplayed(t *testing.T) {
 	}
 }
 
-// TestMintAllCountsRealLines guards an off-by-one that would refuse a legitimate
+// TestNewSnapshotCountsRealLines guards an off-by-one that would refuse a legitimate
 // edit to the last line, or accept one to a line that does not exist. A trailing
 // newline is not a line anyone saw.
-func TestMintAllCountsRealLines(t *testing.T) {
+func TestNewSnapshotCountsRealLines(t *testing.T) {
 	cases := []struct {
 		name  string
 		text  string
@@ -77,7 +78,7 @@ func TestMintAllCountsRealLines(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			g := NewWithT(t)
-			s := MintAll(c.text)
+			s := NewSnapshot(c.text)
 
 			g.Expect(s.Lines).To(HaveLen(c.lines), "text %q", c.text)
 			if c.lines > 0 {
@@ -89,11 +90,11 @@ func TestMintAllCountsRealLines(t *testing.T) {
 	}
 }
 
-// TestMintAllShowsEveryLineOfAdversarialFiles pairs with the tag tests: the shapes
+// TestNewSnapshotShowsEveryLineOfAdversarialFiles pairs with the tag tests: the shapes
 // that break a line counter are the same ones that break a hash. Identical adjacent
 // lines are the case a set keyed on content would collapse, which is why Lines is
 // keyed on number.
-func TestMintAllShowsEveryLineOfAdversarialFiles(t *testing.T) {
+func TestNewSnapshotShowsEveryLineOfAdversarialFiles(t *testing.T) {
 	cases := []struct {
 		name  string
 		text  string
@@ -134,7 +135,7 @@ func TestMintAllShowsEveryLineOfAdversarialFiles(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			g := NewWithT(t)
-			s := MintAll(c.text)
+			s := NewSnapshot(c.text)
 
 			g.Expect(s.Lines).To(HaveLen(c.lines), "text %q", c.text)
 			for n := 1; n <= c.lines; n++ {
@@ -151,7 +152,7 @@ func TestMintAllShowsEveryLineOfAdversarialFiles(t *testing.T) {
 func TestSnapshotDetectsAChangedFile(t *testing.T) {
 	g := NewWithT(t)
 	served := "alpha\nbeta\n"
-	s := MintAll(served)
+	s := NewSnapshot(served)
 
 	g.Expect(s.Text).To(Equal(served))
 	g.Expect(Tag(s.Text)).To(Equal(s.Tag), "a snapshot must agree with itself")

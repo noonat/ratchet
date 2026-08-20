@@ -14,7 +14,7 @@ import (
 // test here starts from.
 func applied(file string, hunks ...patch.Hunk) (Result, error) {
 	reads := anchor.NewReads()
-	reads.Record("a/b.ts", anchor.MintAll(file))
+	reads.Record("a/b.ts", anchor.NewSnapshot(file))
 	return Apply(reads, patch.Patch{
 		Path:  "a/b.ts",
 		Tag:   anchor.Tag(file),
@@ -207,7 +207,7 @@ func TestApplyRefusesAndSaysWhat(t *testing.T) {
 func TestAnchorRefusalShowsNoAttempt(t *testing.T) {
 	g := NewWithT(t)
 	reads := anchor.NewReads()
-	reads.Record("a/b.ts", anchor.MintAll("one\ntwo\nthree\n"))
+	reads.Record("a/b.ts", anchor.NewSnapshot("one\ntwo\nthree\n"))
 	moved := "one\nCHANGED\nthree\n"
 
 	res, err := Apply(reads, put("a/b.ts", anchor.Tag("one\ntwo\nthree\n"), 2, "two", "TWO"), moved)

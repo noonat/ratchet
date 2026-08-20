@@ -849,7 +849,7 @@ whole file and its lines carry bare numbers.
 ```go
 // Tag is the four-hex fingerprint carried by a rendered read. Trailing
 // whitespace is stripped per line first, so a display-trimmed or CRLF copy of
-// the same content mints the same tag.
+// the same content produces the same tag.
 func Tag(text string) string {
     return fmt.Sprintf("%04X", xxhash32(normalize(text))&0xFFFF)
 }
@@ -920,7 +920,7 @@ recognized-tag message says re-read. Ratchet's first branch is the one addition,
 and it is licensed only by the byte-identical check that oh-my-pi's coarser
 file-level tag does not need to make.
 
-### An anchor must have been minted, not merely be correct
+### An anchor must have come from a read, not merely be correct
 
 One more precondition, and a measurement is the reason for it. **An edit is
 refused unless the anchor it carries was issued by a read in this session**,

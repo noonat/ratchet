@@ -68,10 +68,10 @@ const Tail = 5
 //
 // Two substitutions make that possible, and both are stated rather than hidden. The
 // anchor is replaced with the built file's own, because a tag names the file it was
-// minted from and cannot survive being moved to another. Nothing measurable is lost:
+// made from and cannot survive being moved to another. Nothing measurable is lost:
 // of the 4,099 recorded attempts in these two forms, 3,788 got as far as writing a
 // section header and all 3,788 carried the tag they were served, so the check being
-// skipped is one that never fired. The read is minted whole, because the harness
+// skipped is one that never fired. The read covers the whole file, because the harness
 // always displayed the whole window.
 //
 // So this exercises the parser, the hunk limit, the old-line check and the splice. It
@@ -103,7 +103,7 @@ func Replay(rec fixture.Record) Outcome {
 	}
 
 	file := Build(rec.Line, rec.Original)
-	snap := anchor.MintAll(file)
+	snap := anchor.NewSnapshot(file)
 	reads := anchor.NewReads()
 	reads.Record(p.Path, snap)
 	p.Tag = snap.Tag

@@ -21,10 +21,10 @@ type Snapshot struct {
 	Lines map[int]struct{}
 }
 
-// Mint records a read. The lines given are the ones displayed, which is not
-// always every line of the text: a window over a long file shows some of it and
-// stamps a tag for all of it.
-func Mint(text string, lines []int) Snapshot {
+// NewSnapshotForLines records a read. The lines given are the ones displayed,
+// which is not always every line of the text: a window over a long file shows
+// some of it and stamps a tag for all of it.
+func NewSnapshotForLines(text string, lines []int) Snapshot {
 	set := make(map[int]struct{}, len(lines))
 	for _, n := range lines {
 		set[n] = struct{}{}
@@ -32,9 +32,9 @@ func Mint(text string, lines []int) Snapshot {
 	return Snapshot{Tag: Tag(text), Text: text, Lines: set}
 }
 
-// MintAll records a read that displayed the whole file, which is the common case
-// and the one worth having a name for.
-func MintAll(text string) Snapshot {
+// NewSnapshot records a read that displayed the whole file, which is the common
+// case and the one worth having a name for.
+func NewSnapshot(text string) Snapshot {
 	// Count on the text with line endings converted but trailing blanks left alone.
 	// Normalize turns a whitespace-only last line into an empty one, which the rule
 	// below then reads as a trailing newline and discards: a file whose last line
@@ -50,7 +50,7 @@ func MintAll(text string) Snapshot {
 	for i := range lines {
 		nums = append(nums, i+1)
 	}
-	return Mint(text, nums)
+	return NewSnapshotForLines(text, nums)
 }
 
 // Shows reports whether the read displayed this line. An edit to a line it did not
