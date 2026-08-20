@@ -232,8 +232,13 @@ func (r *Report) Write(w io.Writer) error {
 	for k := range kinds {
 		names = append(names, k)
 	}
+	// The name breaks a tie, so two kinds with equal counts do not swap places between
+	// runs. This report exists to be compared against yesterday's.
 	sort.Slice(names, func(i, j int) bool {
-		return kinds[names[i]] > kinds[names[j]]
+		if kinds[names[i]] != kinds[names[j]] {
+			return kinds[names[i]] > kinds[names[j]]
+		}
+		return names[i] < names[j]
 	})
 	for _, k := range names {
 		if _, err := fmt.Fprintf(w, "  %-32s %d\n", k, kinds[k]); err != nil {

@@ -1,6 +1,7 @@
 package edit
 
 import (
+	"context"
 	"strings"
 
 	"ratchet/internal/anchor"
@@ -14,9 +15,17 @@ import (
 // a refusal cannot leave a file half-edited. On refusal the result still carries the
 // file as it stands, and carries the attempt itself when the refusal was about
 // content rather than about the anchor.
-func Apply(reads *anchor.Reads, p patch.Patch, current string) (Result, error) {
+func Apply(ctx context.Context, reads *anchor.Reads, p patch.Patch, current string, opts Options) (Result, error) {
 	res := Result{
 		Now: current,
+	}
+	if n, asked := len(p.Hunks), opts.hunks(); n > asked {
+		return res, refuse(
+			ReasonTooManyHunks,
+			"The reply carries %d changes and %d was asked for. Send only the change that was requested.",
+			n,
+			asked,
+		)
 	}
 	if _, err := Resolve(reads, p, current); err != nil {
 		return res, err
@@ -26,6 +35,7 @@ func Apply(reads *anchor.Reads, p patch.Patch, current string) (Result, error) {
 	edited, err := splice(rows, p.Hunks, true)
 	if err == nil {
 		res.Text = render(edited)
+		res.Diff = diff(rows, edited, p.Hunks)
 		return res, nil
 	}
 

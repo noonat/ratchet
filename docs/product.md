@@ -1339,6 +1339,7 @@ $ ratchet qualify glm-4.7-flash:32k
   qualified, with adjustments:
     edit syntax      header form        (diff form unusable: 0/30)
     read window      400 lines
+    retry            on refusal         (recovers 45% of diagnosed failures)
 
   Written to .ratchet/models/glm-4.7-flash-32k.json
 ```

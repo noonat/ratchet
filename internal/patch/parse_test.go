@@ -222,48 +222,6 @@ func TestParseRefusesRatherThanGuessing(t *testing.T) {
 	}
 }
 
-func TestAtMostCountsHunksAgainstTheRequest(t *testing.T) {
-	cases := []struct {
-		name    string
-		reply   string
-		asked   int
-		refused bool
-	}{
-		{
-			name:    "one asked, one given",
-			reply:   "[a/b.ts#1A2B]\nPUT 1.=1:\n-x\n+y",
-			asked:   1,
-			refused: false,
-		},
-		{
-			name:    "one asked, two given",
-			reply:   "[a/b.ts#1A2B]\nPUT 1.=1:\n-x\n+y\nPUT 5.=5:\n-p\n+q",
-			asked:   1,
-			refused: true,
-		},
-		{
-			name:    "two asked, two given",
-			reply:   "[a/b.ts#1A2B]\nPUT 1.=1:\n-x\n+y\nPUT 5.=5:\n-p\n+q",
-			asked:   2,
-			refused: false,
-		},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			g := NewWithT(t)
-			p, err := Parse(c.reply)
-			g.Expect(err).NotTo(HaveOccurred())
-
-			if c.refused {
-				g.Expect(p.AtMost(c.asked)).To(HaveOccurred())
-				return
-			}
-			g.Expect(p.AtMost(c.asked)).NotTo(HaveOccurred())
-		})
-	}
-}
-
 // TestParseSkipsACodeFence records a tolerance rather than a rule.
 //
 // Models wrap a reply in a fence out of Markdown habit: 221 of 3,789 recorded

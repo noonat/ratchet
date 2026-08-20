@@ -7,7 +7,7 @@
 // copied it faithfully out of a file that already had it, and 289 of those scored
 // correct, so converting to ASCII here would have silently changed 289 right answers
 // into wrong ones. The damage that was measured is indentation, 30 replies in 119,
-// and `patch.Reindent` is the repair for it.
+// which is caught by checking the old row rather than repaired.
 //
 // Nothing here writes to disk. Every stage that could reject an edit runs before
 // any byte is produced, so a refusal cannot half-apply: the caller receives the
@@ -45,6 +45,14 @@ const (
 	ReasonOutOfRange
 	// ReasonOldMismatch means the text stated as being replaced is not the text there.
 	ReasonOldMismatch
+	// ReasonTooManyHunks means the reply carries more changes than were asked for.
+	//
+	// Its own reason rather than ReasonUnusable, because the reply is well formed and
+	// what is wrong is the request it answers: it edits lines nobody mentioned.
+	// Measured, asking two models for two hunks produced replies with 27, 57, 59, 68
+	// and 71, so a caller building a corrective turn has to tell this apart from a
+	// reply it could not read at all.
+	ReasonTooManyHunks
 	// ReasonUnusable means the patch itself does not describe an edit: no hunks, a hunk
 	// whose row count contradicts its range, or hunks that overlap or run backwards.
 	//
@@ -70,6 +78,8 @@ func (r Reason) String() string {
 		return "the file has no such line"
 	case ReasonOldMismatch:
 		return "the text being replaced is not what is there"
+	case ReasonTooManyHunks:
+		return "the reply carries more changes than were asked for"
 	case ReasonUnusable:
 		return "the patch does not describe an edit"
 	}
@@ -114,6 +124,12 @@ type Result struct {
 	Would string
 	// Now is the file as it stands, always set.
 	Now string
+	// Diff is what changed, set only when the edit was applied.
+	//
+	// Rendered here rather than left to the caller so that the tool reports what it
+	// did in the same notation the model was asked to write in, which is one format
+	// fewer for either of them to get wrong.
+	Diff string
 }
 
 // window renders the lines around a target, the way a read would show them, so a

@@ -6,10 +6,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// TestNewSnapshotForLinesRecordsOnlyWhatWasShown is the property the Lines field
-// exists for. A windowed read stamps a tag for the whole file while showing part
-// of it, and an edit to a line nobody saw is unreviewed however well-formed the
-// anchor is.
+// TestNewSnapshotForLinesRecordsOnlyWhatWasShown is the property the Lines field exists for.
+// A windowed read stamps a tag for the whole file while showing part of it, and an
+// edit to a line nobody saw is unreviewed however well-formed the anchor is.
 func TestNewSnapshotForLinesRecordsOnlyWhatWasShown(t *testing.T) {
 	g := NewWithT(t)
 	text := "one\ntwo\nthree\nfour\nfive\n"
@@ -161,4 +160,58 @@ func TestSnapshotDetectsAChangedFile(t *testing.T) {
 		NotTo(Equal(s.Tag), "the file moved and the tag must say so")
 	g.Expect(Tag("alpha   \nbeta\t\n")).
 		To(Equal(s.Tag), "trailing blanks are not a change and must not read as one")
+}
+
+// TestLinesIsWhatAnAddressCounts pins the one decision about what a line is. A
+// listing that shows a line the applier will not accept is worse than no listing, and
+// that happened: a second splitter written beside the renderer counted a phantom line
+// 1 in an empty file.
+func TestLinesIsWhatAnAddressCounts(t *testing.T) {
+	cases := []struct {
+		name string
+		text string
+		want []string
+	}{
+		{
+			name: "an empty file has no lines",
+			text: "",
+			want: nil,
+		},
+		{
+			name: "just a newline is one empty line",
+			text: "\n",
+			want: []string{""},
+		},
+		{
+			name: "a trailing newline does not start another line",
+			text: "a\nb\n",
+			want: []string{"a", "b"},
+		},
+		{
+			name: "an unterminated last line still counts",
+			text: "a\nb",
+			want: []string{"a", "b"},
+		},
+		{
+			name: "CRLF is folded, because a read does not show the carriage return",
+			text: "a\r\nb\r\n",
+			want: []string{"a", "b"},
+		},
+		{
+			name: "a blank line in the middle keeps its place",
+			text: "a\n\nc\n",
+			want: []string{"a", "", "c"},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			g := NewWithT(t)
+			got := Lines(c.text)
+
+			g.Expect(got).To(Equal(c.want))
+			g.Expect(NewSnapshot(c.text).Lines).
+				To(HaveLen(len(c.want)), "a snapshot shows exactly the lines Lines counts")
+		})
+	}
 }

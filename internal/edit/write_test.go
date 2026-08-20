@@ -28,6 +28,7 @@ import (
 // is not a write by the applier.
 func TestNothingHereCanReachAFile(t *testing.T) {
 	allowed := map[string]struct{}{
+		`"context"`:                       {},
 		`"fmt"`:                           {},
 		`"strings"`:                       {},
 		`"github.com/cockroachdb/errors"`: {},

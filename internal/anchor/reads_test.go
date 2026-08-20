@@ -7,7 +7,7 @@ import (
 )
 
 // TestReadsKeepsTheLatest records the choice, which is not obvious. An earlier tag
-// was issued legitimately, so refusing it looks harsh; honoring it is worse. If the
+// was served legitimately, so refusing it looks harsh; honoring it is worse. If the
 // file changed after the second read, applying against the first snapshot writes over
 // content the model was later shown differently, and if it did not change, both reads
 // produced the same string anyway.

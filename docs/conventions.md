@@ -300,6 +300,11 @@ Binding gomega to the parent `t` attributes the failure to the function instead
 of the row, hides the row's name, and stops the table at the first failure. The
 closure fixes all three for one line.
 
+**Judgment.** A test passes `t.Context()`, not `context.Background()`. It is
+cancelled when the test ends, so anything the test started stops with it rather
+than outliving the run. A helper that needs one takes it as a parameter, which
+is what a function needing a context does anyway.
+
 **Judgment.** A test helper that asserts takes the gomega, not the `*testing.T`:
 
 ```go
@@ -443,6 +448,15 @@ commit, or change something. An open question invites a yes that was meant as a
 comment.
 
 ## Specs
+
+**Judgment.** A design document describes the target and is corrected when the
+target moves. It is speculative by construction, so a departure from it is a
+reason to change it, not something to annotate.
+
+A plan is the opposite: it records what was intended, so where the work went
+differently the difference belongs with the plan. The two were confused once,
+and it produced a document cataloguing fifteen departures from a design that
+could simply have been made true.
 
 **Judgment.** Carry the design in the spec, with the rejected alternative named.
 An iteration that passes every size budget and omits the reasoning failed eight

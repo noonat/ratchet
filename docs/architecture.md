@@ -872,9 +872,9 @@ make the comparison mean something, and both are recorded when `read` renders:
 
 ```go
 type Snapshot struct {
-    Tag   string       // what we stamped the render with
-    Text  string       // exactly what we served
-    Lines map[int]bool // the line numbers actually displayed
+    Tag   string           // what we stamped the render with
+    Text  string           // exactly what we served
+    Lines map[int]struct{} // the line numbers actually displayed
 }
 ```
 
@@ -960,7 +960,21 @@ what the anchor exists to prevent.
 
 ### The edit pipeline
 
-Four stages, and nothing is written until the last.
+Four stages, and nothing is written until the last. The measurement behind each
+decision is in [edit-applier.md](edit-applier.md).
+
+```go
+edit.Apply(ctx, reads, patch, current, opts) (Result, error)
+```
+
+`reads` is what this session has served, not one snapshot: the provenance check
+is what stands between an anchor lifted out of a refusal message and a silent
+wrong-line edit, and asking the caller to pass the right snapshot moves that
+decision to the wrong place.
+
+`opts` carries what belongs to the request rather than to the patch language —
+how many changes were asked for, and whether a repair may run. `Result` carries
+the new text, the diff, and the file as it stands.
 
 ```
   resolve anchor ─► apply in memory ─► validate ─► diff-filter ─► write
@@ -979,15 +993,8 @@ answers into wrong ones and each would have looked right in review.
 
 The damage that was measured is indentation. glm reproduced a line correctly and
 mangled its leading whitespace 22 times in 30, and 30 replies in 119 across four
-models did the same. Checking the old row catches it: of 240 recorded replies
-whose replacement lost its indentation, the old row had lost it in 240, so those
-replies are refused rather than repaired.
-
-Both repairs this pipeline once planned are gone for that reason. Re-indentation
-cannot fire behind a check on the old row, and filling in a missing sigil needs
-a body whose rows can only mean one thing, which is not this form. What a reply
-gets instead is a refusal naming the line, and a corrective turn recovers about
-45% of diagnosed failures.
+models did the same. The repair for that is re-indentation from the line being
+replaced, which uses what the tool already knows rather than guessing.
 
 Similarity matching is not in this pipeline and will not be: aider has an
 edit-distance matcher at threshold 0.8 and disabled it with a bare `return`, and
@@ -1008,6 +1015,62 @@ produced, and the file's current content. SWE-agent's ablation is the argument
 for all three. Without the error the model misdiagnoses, without its own attempt
 it reissues the same edit, without the current content it edits against a memory
 from four turns ago.
+
+### The patch language, and what it tolerates
+
+Two forms, each naming a line and giving the text being replaced beside its
+replacement:
+
+```
+[dir/file.ts#1A2B]     the section header: path, and the tag from the read
+PUT 12.=12:            replace original lines 12 to 12
+-const n = 1;          the line as it stands
++const n = 2;          the line as it should be
+
+[dir/file.ts#1A2B]
+SUB 12:                replace a fragment within original line 12
+-const
++let
+```
+
+A body row is its sigil followed by content, verbatim. Content whose own first
+character is `-` or `+` needs no escape, because the sigil is always first and
+everything after it is content. Nothing is doubled.
+
+Line numbers are the original snapshot's, never shifted by an earlier hunk in
+the same reply. Hunks must run forward and must not overlap.
+
+**A reply carrying more changes than were asked for is refused,** with its own
+reason rather than as a parse failure. The limit belongs to the request, not to
+the grammar: a reply with eight hunks is well formed and, when one was asked
+for, edits seven lines nobody mentioned. A caller building a corrective turn has
+to tell that apart from a reply it could not read.
+
+**A code fence is skipped around a reply and refused inside a hunk.** Models
+wrap replies in one out of Markdown habit, and skipping it is unambiguous
+outside a body: a header opens with a bracket and a body row with a sigil, so a
+line of only backticks is neither. Inside a body it is refused, because dropping
+it would shorten the replacement and leave an unterminated fence in the file.
+
+**No repairs.** Two were planned, and the evidence retired both:
+
+- Filling in a missing sigil was measured to take correct body rows from 64% to
+  99%, on a form whose body rows are all additions. There a bare row can only
+  mean one thing; here a body has an old row and a new row, so a body of bare
+  rows does not say which is which, and inferring it is the guess the old-row
+  check exists to prevent.
+- Re-indentation was measured on the same kind of form, and the check retires it
+  too. Of 240 recorded replies whose replacement lost its indentation, the `-`
+  row had lost it in all 240: a model does not slip on one row and keep the
+  other, it reproduces the line without its indentation throughout. So the
+  old-row check refuses those replies before a repair could reach them, and a
+  repair that cannot fire is worse than none — it reads as a defence that is
+  doing something.
+
+That is the third thing checking the old row buys. It was already free on
+correctness and free on refusals; it also makes both repairs unnecessary. What
+those replies get instead is a refusal naming the line, and a corrective turn
+recovers about 45% of those.
 
 ### Two forms that measured well are not used
 

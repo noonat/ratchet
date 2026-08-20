@@ -13,6 +13,7 @@
 package replay
 
 import (
+	"context"
 	"fmt"
 
 	"ratchet/internal/anchor"
@@ -86,10 +87,15 @@ func Replay(rec fixture.Record) Outcome {
 			Detail:  err.Error(),
 		}
 	}
-	if err := p.AtMost(Requested); err != nil {
+
+	// Before abstaining: a reply carrying more hunks than were asked for addresses
+	// lines other than the recorded one by definition, so the abstention below would
+	// swallow it. The harness called that applied_wrong, and it is a judgment about
+	// the reply rather than a limit of what was recorded.
+	if len(p.Hunks) > Requested {
 		return Outcome{
 			Verdict: VerdictAppliedWrong,
-			Detail:  err.Error(),
+			Detail:  fmt.Sprintf("carries %d changes and %d was asked for", len(p.Hunks), Requested),
 		}
 	}
 
@@ -108,7 +114,9 @@ func Replay(rec fixture.Record) Outcome {
 	reads.Record(p.Path, snap)
 	p.Tag = snap.Tag
 
-	res, err := edit.Apply(reads, *p, file)
+	res, err := edit.Apply(context.Background(), reads, *p, file, edit.Options{
+		MaxHunks: Requested,
+	})
 	if err != nil {
 		return Outcome{
 			Verdict: VerdictRefused,
@@ -154,24 +162,12 @@ func Build(line int, original string) string {
 
 // Line returns one line of a file by number, and whether the file has it.
 //
-// A trailing newline terminates the last line rather than starting another, so
-// Line("a\n", 2) reports that there is no line 2. Counting the empty string after it
-// would make every file appear to have one more line than it shows.
+// Counted by anchor.Lines, which is what a read displays and what an address means,
+// so this cannot disagree with the applier about where line N is.
 func Line(text string, n int) (string, bool) {
-	if n < 1 {
+	lines := anchor.Lines(text)
+	if n < 1 || n > len(lines) {
 		return "", false
 	}
-	at := 1
-	for start := 0; start < len(text); {
-		end := start
-		for end < len(text) && text[end] != '\n' {
-			end++
-		}
-		if at == n {
-			return text[start:end], true
-		}
-		at++
-		start = end + 1
-	}
-	return "", false
+	return lines[n-1], true
 }

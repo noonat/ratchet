@@ -1,6 +1,7 @@
 package edit
 
 import (
+	"context"
 	"testing"
 
 	"github.com/cockroachdb/errors"
@@ -12,14 +13,16 @@ import (
 
 // applied runs a patch against a file that was read whole, which is the case every
 // test here starts from.
-func applied(file string, hunks ...patch.Hunk) (Result, error) {
+func applied(ctx context.Context, file string, hunks ...patch.Hunk) (Result, error) {
 	reads := anchor.NewReads()
 	reads.Record("a/b.ts", anchor.NewSnapshot(file))
-	return Apply(reads, patch.Patch{
+	return Apply(ctx, reads, patch.Patch{
 		Path:  "a/b.ts",
 		Tag:   anchor.Tag(file),
 		Hunks: hunks,
-	}, file)
+	}, file, Options{
+		MaxHunks: len(hunks),
+	})
 }
 
 func TestApplyProducesTheEditedFile(t *testing.T) {
@@ -115,11 +118,73 @@ func TestApplyProducesTheEditedFile(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			g := NewWithT(t)
-			res, err := applied(c.file, c.hunks...)
+			res, err := applied(t.Context(), c.file, c.hunks...)
 
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(res.Text).To(Equal(c.want))
 			g.Expect(res.Now).To(Equal(c.file), "the file as it stands is always handed back")
+		})
+	}
+}
+
+// TestTheHunkLimitBelongsToTheRequest covers the check that is about what was asked
+// for rather than about the patch language.
+//
+// A reply carrying more changes than were requested is well formed and edits lines
+// nobody mentioned. Measured, asking two models for two hunks produced replies with
+// 27, 57, 59, 68 and 71, so the limit is not theoretical.
+func TestTheHunkLimitBelongsToTheRequest(t *testing.T) {
+	cases := []struct {
+		name    string
+		asked   int
+		refused bool
+	}{
+		{
+			name:    "two changes when one was asked for",
+			asked:   1,
+			refused: true,
+		},
+		{
+			name:    "two changes when two were asked for",
+			asked:   2,
+			refused: false,
+		},
+		{
+			name:    "the zero value asks for one",
+			asked:   0,
+			refused: true,
+		},
+	}
+
+	file := "a\nb\nc\nd\n"
+	hunks := []patch.Hunk{
+		{Kind: patch.KindPut, Line: 1, End: 1, Old: []string{"a"}, New: []string{"A"}},
+		{Kind: patch.KindPut, Line: 4, End: 4, Old: []string{"d"}, New: []string{"D"}},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			g := NewWithT(t)
+			reads := anchor.NewReads()
+			reads.Record("a/b.ts", anchor.NewSnapshot(file))
+
+			_, err := Apply(t.Context(), reads, patch.Patch{
+				Path:  "a/b.ts",
+				Tag:   anchor.Tag(file),
+				Hunks: hunks,
+			}, file, Options{
+				MaxHunks: c.asked,
+			})
+
+			if c.refused {
+				g.Expect(err).To(HaveOccurred())
+				var r *Refusal
+				g.Expect(errors.As(err, &r)).
+					To(BeTrue(), "the limit is a refusal, not a parse fault: the reply read cleanly")
+				g.Expect(r.Reason).To(Equal(ReasonTooManyHunks))
+				return
+			}
+			g.Expect(err).NotTo(HaveOccurred())
 		})
 	}
 }
@@ -135,7 +200,7 @@ func TestNothingIsRewrittenBehindTheModel(t *testing.T) {
 	g := NewWithT(t)
 	file := "keep — this\nchange me\n"
 
-	res, err := applied(file, patch.Hunk{
+	res, err := applied(t.Context(), file, patch.Hunk{
 		Kind: patch.KindPut,
 		Line: 2,
 		End:  2,
@@ -187,7 +252,7 @@ func TestApplyRefusesAndSaysWhat(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			g := NewWithT(t)
-			res, err := applied(c.file, c.hunk)
+			res, err := applied(t.Context(), c.file, c.hunk)
 
 			g.Expect(err).To(HaveOccurred())
 			var r *Refusal
@@ -210,7 +275,7 @@ func TestAnchorRefusalShowsNoAttempt(t *testing.T) {
 	reads.Record("a/b.ts", anchor.NewSnapshot("one\ntwo\nthree\n"))
 	moved := "one\nCHANGED\nthree\n"
 
-	res, err := Apply(reads, put("a/b.ts", anchor.Tag("one\ntwo\nthree\n"), 2, "two", "TWO"), moved)
+	res, err := Apply(t.Context(), reads, put("a/b.ts", anchor.Tag("one\ntwo\nthree\n"), 2, "two", "TWO"), moved, Options{})
 
 	g.Expect(err).To(HaveOccurred())
 	g.Expect(res.Would).To(BeEmpty())

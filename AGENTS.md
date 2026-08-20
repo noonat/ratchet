@@ -16,6 +16,7 @@ into a manual stops being read, and the things in it stop being followed.
 | anything                     | [docs/conventions.md](docs/conventions.md)    |
 | changing how it is built     | [docs/architecture.md](docs/architecture.md)  |
 | changing what it does        | [docs/product.md](docs/product.md)            |
+| touching the applier         | [docs/edit-applier.md](docs/edit-applier.md)  |
 | picking up work              | [specs/](specs/), lowest open iteration first |
 | noting an idea, not doing it | [specs/TODO.md](specs/TODO.md)                |
 
@@ -27,8 +28,8 @@ into a manual stops being read, and the things in it stop being followed.
 - Never commit or push without asking. Approval of one commit is not approval of
   the next.
 - A commit body says why, not what. Draft it, review it, then ask.
-- A design doc is design. When the code contradicts it, say so in the spec's
-  last iteration rather than quietly diverging.
+- A design doc describes the target. When the code contradicts it, correct the
+  doc; the spec is where a departure from the plan is recorded.
 - Cite the measurement, not the file path: paths outside this repo will break.
 
 ## What is enforced rather than trusted

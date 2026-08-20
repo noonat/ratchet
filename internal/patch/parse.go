@@ -187,16 +187,3 @@ func Parse(reply string) (*Patch, error) {
 	}
 	return p, nil
 }
-
-// AtMost refuses a patch carrying more hunks than were asked for.
-//
-// This is separate from Parse because the limit belongs to the request rather than
-// to the grammar: a reply with eight hunks is well formed and, when one was asked
-// for, edits seven lines nobody mentioned. Measured, that happens: asking two
-// models for two hunks produced replies with 27, 57, 59, 68 and 71.
-func (p *Patch) AtMost(n int) error {
-	if len(p.Hunks) > n {
-		return fault(fmt.Sprintf("the reply carries %d hunks and %d were asked for", len(p.Hunks), n))
-	}
-	return nil
-}

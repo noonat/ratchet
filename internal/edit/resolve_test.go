@@ -274,11 +274,11 @@ func TestResolveRefusesAnUnusablePatch(t *testing.T) {
 			reads := anchor.NewReads()
 			reads.Record("a/b.ts", anchor.NewSnapshot(served))
 
-			res, err := Apply(reads, patch.Patch{
+			res, err := Apply(t.Context(), reads, patch.Patch{
 				Path:  "a/b.ts",
 				Tag:   anchor.Tag(served),
 				Hunks: c.hunks,
-			}, served)
+			}, served, Options{MaxHunks: len(c.hunks)})
 
 			g.Expect(err).To(HaveOccurred())
 			var r *Refusal

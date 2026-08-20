@@ -34,6 +34,10 @@ func (r *Reads) Record(file string, s Snapshot) {
 }
 
 // Snapshot returns what a read served for a path, and whether one did.
+//
+// The second value is the point. A snapshot means a read in this session showed this
+// file, which is what an anchor has to be able to claim; no snapshot means the edit is
+// refused however well its anchor matches.
 func (r *Reads) Snapshot(file string) (Snapshot, bool) {
 	s, ok := r.latest[pathKey(file)]
 	return s, ok

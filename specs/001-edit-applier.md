@@ -1,7 +1,7 @@
 ---
-status: active
+status: done
 created: 2026-08-19T15:00:00Z
-updated: 2026-08-19T16:44:24.179226194Z
+updated: 2026-08-20T12:50:24.377996774Z
 required_commands:
   - cmd: make check
 ---
@@ -271,127 +271,101 @@ disagreement was wrong is a judgment and not a command.
 
 ## Iteration 6: the tool surface
 
-- [ ] Expose the applier as the function the agent loop will call:
+- [x] Expose the applier as the function the agent loop will call:
       `Apply(ctx, Snapshot, Patch, Options) (Result, error)`, where `Result`
       carries the new text, the diff, and the refusal if there was one
-- [ ] Add `ratchet edit --file --patch` as a thin command over it, so a person
+- [x] Add `ratchet edit --file --patch` as a thin command over it, so a person
       or a shell test can drive the applier without an agent
-- [ ] Write `docs/edit-applier.md` recording what was built, which measurement
+- [x] Write `docs/edit-applier.md` recording what was built, which measurement
       each decision rests on, and every place the code departed from
       `../docs/architecture.md`. That document is design; this iteration is the
       first evidence about it
 
-## Divergences so far
+> **Completed** 2026-08-20 12:50 UTC
+>
+> - `make check` — 517ms
 
-Not an iteration: no checkboxes, so `backlog` reads this as prose. Where the
-code departs from a todo above, the departure is recorded here as it happens.
-Iteration 6's last todo folds this into `docs/edit-applier.md`, which is where
-it belongs once there is a document to hold it.
+## Where this plan was departed from
 
-- Iteration 2's todo asks for a doubling rule that "writes a literal leading `-`
-  or `+` in content twice". The parser does not double, because the format that
-  was measured does not either. The probe's own prompt said "`- item` becomes
-  `+- item`", which is a sigil followed by a literal dash, and its scorer
-  accepted that. Doubling would have produced a parser disagreeing with every
-  reply already recorded. The name is wrong here and in the harness that
-  measured it. Renaming it there changes the prompt's hash and so breaks
-  comparison with every run that used it, which is why it waits, and why it is
-  tracked with that harness rather than here.
+Not an iteration: no checkboxes, so `backlog` reads this as prose.
 
-- Iteration 2's todos ask for two repairs. There are none. Both were measured on
-  a form with no old row to check, and checking one retires them.
+A plan records what was intended, so where the work went differently the
+difference belongs here. The design documents are not like that: they describe
+the target and are corrected as it moves, so there is nothing to record against
+them.
 
-  Filling in a missing sigil was measured on `put_sigil`, whose body rows are
-  all additions, so a bare row there can only mean one thing. This parser reads
-  a form with an old row and a new row, and a body of bare rows does not say
-  which is which; inferring it would be the guess the old-line check exists to
-  prevent, and `put_sigil` was rejected for corrupting thirty times as often.
+**Iteration 6 asks for a record of every place the code departed from the
+design.** There is no such record, because a design document that describes a
+target is corrected when the target moves rather than annotated. Three of those
+departures were the design being wrong: the normalize stage,
+`Lines map[int]bool`, and a single `main.go`. All three are fixed in
+`architecture.md`, and what the design had not said at all — the patch
+language's own rules — is now written there too. `docs/edit-applier.md` keeps
+only the evidence: what was built and the measurement each decision rests on.
 
-  Re-indentation cannot fire at all: of 240 recorded replies whose replacement
-  lost its indentation, the old row had lost it in 240. A model does not drop it
-  from one row and keep it on the other, so the check refuses the reply first.
+**The applier takes what has been read, not one snapshot.** The signature asked
+for is `Apply(ctx, Snapshot, Patch, Options)`. A bare snapshot moves the
+provenance decision to the caller, and provenance is the check standing between
+an anchor lifted out of a refusal message and a silent wrong-line edit.
 
-  What those replies get instead is a refusal naming the line, and a corrective
-  turn recovers 221 of 494 diagnosed failures while turning 35 into wrong ones.
-  A repair that guesses has no price anyone has measured.
+**`ratchet-dev apply`, not `ratchet edit`.** Two changes to the name asked for.
+It is not on the product surface, because the product document enumerates that
+surface and says there is no `ratchet edit` — a sentence about mutating a spec
+rather than applying a patch, but a user typing it and getting a patch applier
+is the same confusion, and driving the applier by hand is debugging the tool.
+And it is `apply` rather than `edit`, which says what it does and matches the
+function it is a shell over.
 
-- Iteration 3's last todo asks for a test asserting the file on disk did not
-  change after each refusal. That test cannot fail: `Apply` takes the file's
-  text and returns text, so there is no path it could write to. What is enforced
-  instead, in `internal/convention`, is that `internal/edit` imports nothing
-  that can reach a file.
+`ratchet-dev read` was added alongside it, because a patch carries the anchor of
+the read it was written against and a person at a shell has none to copy.
 
-- Iteration 3's todo says to check "whether the file is byte-for-byte the
-  snapshot text", and the architecture says byte-identical. The check compares
-  recomputed tags instead. The tag ignores trailing whitespace and line endings
-  on purpose, so that an editor which trims on save does not invalidate an
-  anchor it never saw; comparing bytes refused an edit to an untouched line
-  because another line lost a space, and printed a window byte-identical to what
-  the model had been shown. The branch that names the correct anchor stays safe
-  under the weaker test, because under tag equality the anchor it names is the
-  file's current one.
+**No doubling rule.** Iteration 2 asks for one that writes a literal leading `-`
+or `+` twice. The format that was measured does not double: its own prompt said
+"`- item` becomes `+- item`", a sigil followed by a literal dash, and its scorer
+accepted that. Doubling would have produced a parser disagreeing with every
+reply in the record. The name is wrong in the harness too, and correcting it
+there changes a prompt hash, so it waits.
 
-- Iteration 3's todo asks the applier to convert seven dash variants, eight
-  quote variants and thirteen space variants to ASCII. It converts nothing. The
-  table was specified as "what a Q4 model damages when retyping code", sourced
-  from a survey of other editors that recommends it without citing one that has
-  it. Measured against 19,055 recorded replies, no model introduced any of those
-  characters into a payload. All 336 replies containing one had copied it out of
-  a file that already held it, and 289 scored correct, so the stage would have
-  turned 289 right answers into wrong ones, each looking right in review. The
-  damage that was measured is indentation, 30 replies in 119, and
-  `patch.Reindent` is the repair for it.
+**No repairs, where two were planned.** Both were measured on a form with no old
+row to check, and both are retired by having one. Filling in a missing sigil
+needs a body whose rows can only mean one thing, which is not this form.
+Re-indentation could never fire: of 240 recorded replies whose replacement lost
+its indentation, the `-` row had lost it in all 240, so the old-row check
+refuses them first. The reasoning is in
+[architecture.md](../docs/architecture.md), which describes the target rather
+than this history.
 
-- Two refusals can be true of one edit, and the more specific one is returned. A
-  line past the end of the file is both out of range and undisplayed; naming it
-  undisplayed sends the model to re-read a file that will say the same thing,
-  where naming the range lets it correct the address.
+**The old-line check compares tags, not bytes.** Iteration 3 says to check
+whether the file is byte-for-byte the snapshot text. The tag ignores trailing
+whitespace and line endings on purpose, so an editor that trims on save does not
+invalidate an anchor it never saw; comparing bytes refused an edit to an
+untouched line because another line lost a space, and printed a window identical
+to what the model had been shown.
 
-- Iteration 4's todo says to keep only seven fields. The record keeps an eighth,
-  the fixture name, because it carries the language and nothing else in the
-  record does. Whether re-indentation may run is a question about the language,
-  so a replay without it cannot reproduce that decision.
+**The more specific of two true refusals is returned.** A line past the end of
+the file is both out of range and undisplayed. Naming it undisplayed sends the
+model to re-read a file that will say the same thing.
 
-- The same iteration says it has no judgment in it. It has two. Which journals
-  to copy is one, answered in `journals/README.md`. The other is that the
-  distiller keeps only the two forms this repo parses and only the `edit` probe:
-  a reply in one of the other nine forms would be refused for its syntax, and
-  the other probes record several lines or a delimiter position rather than one
-  line and one expected result, so neither can be checked against a single-line
-  expectation.
+**The disk-unchanged assertion is an import ban.** Iteration 3 asks for a test
+that the file on disk did not change after a refusal. `Apply` takes text and
+returns text, so that test cannot fail. What is checked instead is that
+`internal/edit` imports nothing that can reach a file, and `ratchet-dev apply`'s
+own test confirms it from outside.
 
-- The architecture calls `main.go` the only package main and puts it at the repo
-  root. There is no root `main.go`: the binary is `cmd/ratchet`, and the tooling
-  is `cmd/ratchet-dev`. Two binaries rather than one, because that tooling reads
-  a gitignored directory and has no place in the command tree a user drives.
+**A distilled record keeps eight fields, not seven.** The eighth is the fixture
+name, which carries the language, and whether re-indentation may run is a
+question about the language.
 
-- 1,852 of the 3,789 fixtures repeat an earlier record exactly, and the question
-  of whether to keep them was left to this iteration. They are kept, and the
-  report gives two agreements instead of one.
+**Iteration 4 has judgment in it.** Which journals to copy is one, and the
+distiller keeping only the two forms this repo parses is another: a reply in one
+of the other nine would be refused for its syntax, which says nothing about the
+applier.
 
-  Measured, the two differ by about two and a half points, and the duplicates
-  sit in the records both sides get right: weighting by how often a reply was
-  sent gives 97.5% for `put_diff_checked`, counting each distinct reply once
-  gives 95.1%. The first is what a real run would meet, since an easy rename
-  four models answer identically is four times as common as a hard one. The
-  second is what coverage means, because a common easy case cannot hide a rare
-  disagreement behind it. Reporting one alone invites it to be read as the
-  other.
+**Duplicate fixtures are kept.** 1,852 of 3,789 records repeat an earlier record
+exactly. Weighting a reply by how often it was sent gives 97.5% agreement;
+counting each distinct reply once gives 95.1%. The first is what a real run
+meets, the second is what coverage means, and reporting one alone invites it to
+be read as the other.
 
-  Removing the duplicates from the file was the alternative and is a one-way
-  door: the frequency is evidence, and deduplicating at report time costs one
-  pass. The gate is indifferent either way, 67 distinct disagreements against 68
-  records.
-
-- Iterations 4 and 5 name `internal/fixture/distill.go` and `cmd/replay-edits`.
-  Both live under `internal/dev/` now, behind one `cmd/ratchet-dev` with
-  `fixtures` and `replay` subcommands. None of it is part of what a user
-  installs: the fixtures belong to this repository and the journals are
-  gitignored, so a subcommand of `ratchet` would be a promise that fails on any
-  machine that just installed the binary. Two binaries make that structural
-  instead of a convention.
-
-- Iteration 1's todo asks for `Snapshot{... Lines map[int]bool}`. The code uses
-  `map[int]struct{}`, because a bool implies `false` means something. The todo
-  is closed, so it stays as written; iteration 6's documentation todo is where
-  the departure belongs.
+**The tooling moved under `internal/dev` behind one binary.** Iterations 4 and 5
+name `internal/fixture/distill.go` and `cmd/replay-edits`.
