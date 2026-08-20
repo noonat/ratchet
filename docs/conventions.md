@@ -19,6 +19,12 @@ bodies.
 **American spelling.** normalize, not normalise. behavior, color, judgment,
 license, center. Quoted text keeps whatever the source wrote.
 
+**Use the word a developer already knows.** A term of art from another field
+reads as precise to whoever imported it and as noise to everyone else. "Corpus"
+named the recorded replies here for three iterations; it is linguistics
+vocabulary, and test frameworks have called that thing a fixture for twenty
+years. Where both words fit, the one already in the reader's vocabulary wins.
+
 **Avoid jargon.** Use a technical term when it is the right term. Do not
 compress meaning into an idiom the reader has to unpack.
 
@@ -222,11 +228,11 @@ context.
 which would force redundant wraps on errors that already have stacks.
 
 **Judgment.** A `Fault` carries a stack, attached where it is constructed. An
-earlier version of this file argued the opposite, on the grounds that the corpus
-replay produces thousands of faults and a stack on each is noise. That confused
-attaching a stack with printing one. The stack costs a slice of program counters
-and renders only under `%+v`, while losing it costs the one thing that says
-which of eleven return points produced the fault.
+earlier version of this file argued the opposite, on the grounds that replaying
+the fixtures produces thousands of faults and a stack on each is noise. That
+confused attaching a stack with printing one. The stack costs a slice of program
+counters and renders only under `%+v`, while losing it costs the one thing that
+says which of eleven return points produced the fault.
 
 ## Tests
 

@@ -50,7 +50,7 @@ const (
 	//
 	// One value rather than three, because the caller's answer to all of them is the
 	// same and the message carries which it was. Parse refuses every shape of this,
-	// so it is reachable only from a patch built in code, which the corpus replay
+	// so it is reachable only from a patch built in code, which the fixture replay
 	// does.
 	ReasonUnusable
 )

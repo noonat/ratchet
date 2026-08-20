@@ -100,7 +100,7 @@ Taking indentation from the line being replaced is what raises body rows from
 Python it cannot express moving a line out of a block, so switch it off for
 languages where whitespace matters. Do not apply it everywhere and hope.
 
-### Cut the replay corpus down and commit it
+### Cut the replay fixtures down and commit them
 
 Do not read it from the measurement harness's output directory. That path breaks
 as soon as this repo moves, and the journals hold 70MB of prompt text the
@@ -110,7 +110,7 @@ journal's hash, and commits the result. The test then needs nothing outside this
 repo.
 
 Gitignoring the journals has a consequence worth stating here rather than
-discovering later: a fresh clone has the corpus and not its sources, so
+discovering later: a fresh clone has the fixtures and not their sources, so
 rebuilding must merge rather than overwrite. See the gate section.
 
 ## The gate
@@ -129,15 +129,15 @@ check has to test the output. The short version,
 The Makefile version captures the output and tests it, which is plainer and
 already works here.
 
-`make corpus` is a second target and deliberately not part of `make check`. It
-rebuilds `testdata/corpus.jsonl` from journals in `journals/`, which is
-gitignored, so a fresh clone has the corpus and not the journals it came from. A
-gate has to pass on a fresh clone, so a target needing inputs the clone does not
-have can never be a gate.
+`make fixtures` is a second target and deliberately not part of `make check`. It
+rebuilds `testdata/fixtures.jsonl` from journals in `journals/`, which is
+gitignored, so a fresh clone has the fixtures and not the journals they came
+from. A gate has to pass on a fresh clone, so a target needing inputs the clone
+does not have can never be a gate.
 
 That gitignore forces the target to be additive rather than overwriting. On a
 new machine `journals/` is empty, and a target that rebuilt from whatever it
-found would replace a committed corpus with nothing. So `make corpus` merges:
+found would replace committed fixtures with nothing. So `make fixtures` merges:
 records whose source journal is present are regenerated, records whose source
 journal is absent are kept. Running it twice over the same journals produces the
 same bytes.
@@ -148,8 +148,8 @@ Iteration 1 writes the Makefile, so closing it is the first proof the gate runs.
 
 - [x] Create `go.mod` for module `ratchet` on Go 1.26, and a `Makefile` with the
       targets `help build clean fmt lint test check` and `help` as the default,
-      matching the measurement harness. Iteration 4 adds `corpus`, which is not
-      part of `check`
+      matching the measurement harness. Iteration 4 adds `fixtures`, which is
+      not part of `check`
 - [x] Write `internal/anchor/anchor.go` with `Normalize(text string) string`,
       which strips trailing whitespace per line and converts CRLF to LF, and
       `Tag(text string) string`, which returns four uppercase hex digits
@@ -213,7 +213,7 @@ Iteration 1 writes the Makefile, so closing it is the first proof the gate runs.
 >
 > - `make check` — 462ms
 
-## Iteration 4: build the corpus
+## Iteration 4: build the replay fixtures
 
 Assembling the test data is its own kind of work, and the sizing rule this
 project measured says an iteration does one kind. It also has no judgment in it,
@@ -222,8 +222,8 @@ so it closes on commands alone.
 - [ ] Add `journals/` with a `.gitignore` excluding its contents, and a
       `journals/README.md` naming which harness journals to copy there and why
       they are not committed
-- [ ] Write `internal/corpus/distill.go` and a `make corpus` target. It reads
-      `journals/*.jsonl` and writes `testdata/corpus.jsonl`, keeping only the
+- [ ] Write `internal/fixture/distill.go` and a `make fixtures` target. It reads
+      `journals/*.jsonl` and writes `testdata/fixtures.jsonl`, keeping only the
       source journal name, the patch form, the line number, the original line,
       the wanted line, the reply text and the recorded verdict
 - [ ] Make the target additive. Regenerate the records of every journal present
@@ -233,15 +233,16 @@ so it closes on commands alone.
 - [ ] Record each source journal's name, SHA-256 and record count in a header
       line. Refuse to write when a present journal's hash differs from the
       recorded one, or when the merge would drop records, unless given
-      `FORCE=1`. These two catch a journal that was rescored and a corpus about
+      `FORCE=1`. These two catch a journal that was rescored and fixtures about
       to lose data
-- [ ] Test the fresh-clone case directly: with `journals/` empty, `make corpus`
-      must leave `testdata/corpus.jsonl` byte-identical. The gitignore creates
-      that case, and it is the one that would otherwise destroy the corpus
-- [ ] Commit `testdata/corpus.jsonl` and write `testdata/README.md` saying the
+- [ ] Test the fresh-clone case directly: with `journals/` empty,
+      `make fixtures` must leave `testdata/fixtures.jsonl` byte-identical. The
+      gitignore creates that case, and it is the one that would otherwise
+      destroy them
+- [ ] Commit `testdata/fixtures.jsonl` and write `testdata/README.md` saying the
       file was extracted from those journals rather than written by hand
 
-## Iteration 5: replay the corpus and settle the disagreements
+## Iteration 5: replay the fixtures and settle the disagreements
 
 ```backlog
 required_acks:
@@ -251,9 +252,9 @@ required_acks:
 This iteration carries the one ack, because deciding which side of a
 disagreement was wrong is a judgment and not a command.
 
-- [ ] Write `cmd/replay-edits`, which reads the corpus and reports per patch
+- [ ] Write `cmd/replay-edits`, which reads the fixtures and reports per patch
       form how often the applier's outcome matches the recorded verdict
-- [ ] Add `go test ./internal/edit -run TestAgainstCorpus`, which requires
+- [ ] Add `go test ./internal/edit -run TestAgainstFixtures`, which requires
       agreement on every record. Keep a checked-in list of settled exceptions,
       each with one line saying which side was wrong and why
 - [ ] Settle every disagreement the first run reports. For each, record whether
@@ -283,10 +284,10 @@ it belongs once there is a document to hold it.
   was measured does not either. The probe's own prompt said "`- item` becomes
   `+- item`", which is a sigil followed by a literal dash, and its scorer
   accepted that. Doubling would have produced a parser disagreeing with every
-  reply in the corpus. The name is wrong here and in the harness that measured
-  it. Renaming it there changes the prompt's hash and so breaks comparison with
-  every run that used it, which is why it waits, and why it is tracked with that
-  harness rather than here.
+  reply already recorded. The name is wrong here and in the harness that
+  measured it. Renaming it there changes the prompt's hash and so breaks
+  comparison with every run that used it, which is why it waits, and why it is
+  tracked with that harness rather than here.
 
 - Iteration 2's todos ask for two repairs. There is one. Filling in a missing
   sigil was measured on `put_sigil`, whose body rows are all additions, so a

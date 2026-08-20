@@ -68,7 +68,7 @@ func Resolve(reads *anchor.Reads, p patch.Patch, current string) (anchor.Snapsho
 // usable refuses a patch that does not describe an edit.
 //
 // Parse rejects every shape below, so none of this is reachable from a model's
-// reply. It is reachable from a patch built in code, which the corpus replay does,
+// reply. It is reachable from a patch built in code, which the fixture replay does,
 // and the applier indexes rows and ranges directly: unchecked, each of these is a
 // panic rather than a refusal.
 func usable(p patch.Patch) error {

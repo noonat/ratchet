@@ -1,6 +1,6 @@
 # Ratchet. `make` prints this list; `make check` is what a gate runs.
 #
-# `corpus` is deliberately absent from `check`: it reads journals from
+# `fixtures` is deliberately absent from `check`: it reads journals from
 # `journals/`, which is gitignored, so a fresh clone does not have them. A gate
 # has to pass on a fresh clone.
 
