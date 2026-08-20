@@ -55,7 +55,7 @@ func TestRowNeedsNoEscape(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			g := NewWithT(t)
-			reply := "[a/b.ts#1A2B]\nPUT 3.=3:\n" + Row(Minus, c.content) + "\n" + Row(Plus, c.content+" (edited)")
+			reply := "[a/b.ts#1A2B]\nPUT 3.=3:\n" + Row(SigilMinus, c.content) + "\n" + Row(SigilPlus, c.content+" (edited)")
 
 			p, err := Parse(reply)
 			g.Expect(err).NotTo(HaveOccurred())

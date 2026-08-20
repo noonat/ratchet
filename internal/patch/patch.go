@@ -37,15 +37,15 @@ import (
 type Kind int
 
 const (
-	// Put replaces whole lines, Line through End inclusive.
-	Put Kind = iota
-	// Sub replaces a fragment within a single line.
-	Sub
+	// KindPut replaces whole lines, Line through End inclusive.
+	KindPut Kind = iota
+	// KindSub replaces a fragment within a single line.
+	KindSub
 )
 
 // String names the kind for an error message.
 func (k Kind) String() string {
-	if k == Sub {
+	if k == KindSub {
 		return "SUB"
 	}
 	return "PUT"
@@ -54,14 +54,14 @@ func (k Kind) String() string {
 // Hunk is one change: where it applies, the text being replaced, and the
 // replacement.
 type Hunk struct {
-	// Kind is Put or Sub.
+	// Kind is KindPut or KindSub.
 	Kind Kind
 	// Line is the first original line the hunk addresses, 1-indexed.
 	Line int
-	// End is the last original line, equal to Line for a single-line Put and for
-	// every Sub.
+	// End is the last original line, equal to Line for a single-line `PUT` and for
+	// every `SUB`.
 	End int
-	// Old is the text being replaced: whole lines for a Put, a fragment for a Sub.
+	// Old is the text being replaced: whole lines for a `PUT`, a fragment for a `SUB`.
 	Old []string
 	// New is the replacement, in the same shape as Old.
 	New []string
@@ -130,10 +130,10 @@ func (f *Fault) Error() string {
 type Sigil byte
 
 const (
-	// Minus opens a row stating the text being replaced.
-	Minus Sigil = '-'
-	// Plus opens a row stating the replacement.
-	Plus Sigil = '+'
+	// SigilMinus opens a row stating the text being replaced.
+	SigilMinus Sigil = '-'
+	// SigilPlus opens a row stating the replacement.
+	SigilPlus Sigil = '+'
 )
 
 // Row renders one body row: the sigil, then the content unchanged.

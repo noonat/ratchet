@@ -190,7 +190,7 @@ required_acks:
 ````
 
 Prose for the human, a fenced block for the machine. A person reviewing this
-spec is the last line of defence before hours of unattended work, so the
+spec is the last line of defense before hours of unattended work, so the
 decisions and the steps are written to be read. Only what must be exact goes in
 the block.
 
@@ -360,7 +360,7 @@ That is the whole file at that point:
 ```
 
 Your request stays at the top of the spec permanently, verbatim, never
-summarised. Six months later, "what was actually asked for?" has an answer that
+summarized. Six months later, "what was actually asked for?" has an answer that
 is not an inference from eleven iterations.
 
 Then you watch it work, or you do not.
@@ -733,7 +733,7 @@ of a codebase mixes two kinds of entry.
 ⚠ src/text.js reads globals set in local.js — order-dependent  ← judgment
 ```
 
-No language server will tell you a module depends on initialisation order
+No language server will tell you a module depends on initialization order
 established elsewhere. That is the expensive output of the structure pass. The
 graph is a 200ms computation needing no model at all. An index does not save the
 expensive work. It saves the cheap work.
@@ -837,7 +837,7 @@ satisfy.
 | `read(path)`                     | scoped to the repo; returns a tagged, numbered listing |
 | `edit(path, tag, line, end?, text)` | file tag plus line numbers, not exact-match strings |
 | `write(path, text)`              | whole file; only for files in the iteration's list     |
-| `bash(cmd)`                      | defanged environment; no pagers, progress bars, colour |
+| `bash(cmd)`                      | defanged environment; no pagers, progress bars, color |
 | `revert_file(path)`              | restores one file to its iteration-start state         |
 | `done(summary)`                  | claims the iteration is complete                       |
 | `blocked(reason)`                | stops, and says why                                    |
@@ -990,7 +990,7 @@ iteration that was converging. Given three times the clock it passed.
 Three independent dimensions. **Operations**, a hard count of tool calls per
 attempt, deterministic and portable. **Idle**, time since the last event rather
 than since the attempt began, which is the one thing a clock is good for:
-detecting a dead transport. And **repetition**, keyed on tool plus normalised
+detecting a dead transport. And **repetition**, keyed on tool plus normalized
 arguments, with a warn state before the halt state and a counter that resets on
 a different mistake.
 
@@ -1067,7 +1067,7 @@ Blast radius is one repo: no dotfiles, no `~/.ssh`, no other checkouts, no host
 caches to poison. `git` is absent by construction, since the runner holds git
 outside the container and commits freely while the executor has no path to
 `checkout` or `reset --hard`. Policy is the weaker mechanism every time.
-Defanging becomes reproducible: pinned toolchain, `PAGER=cat`, no colour, npm's
+Defanging becomes reproducible: pinned toolchain, `PAGER=cat`, no color, npm's
 fund and audit output off. On a shared host those drift; in an image they are
 the image. And egress can be constrained to the registry and the model host,
 where today an executor has the whole internet.
@@ -1182,7 +1182,7 @@ that read nothing satisfies it and goes green. So the assertion is that the
 parse is total. 54 entries, all 54 claimed by exactly one field, each in the
 field matching its section. It fails on a misclassified ack, on a silently
 dropped command, and on a parser returning nothing. The per-spec check is the
-second line of defence; the first is a unit test on the parser, watched to fail
+second line of defense; the first is a unit test on the parser, watched to fail
 before it was trusted.
 
 **The exit-127 clause closes a hole.** "This gate fails against a broken tree"
@@ -1361,7 +1361,7 @@ The optimistic half is that a well-chosen form did win for everyone: the best
 scored at least 28 of 30 on every model, with no edit landing in the wrong place.
 So this is not an argument that every model needs its own interface. It is an
 argument that which interface that is, and which repairs it needs alongside, is a
-measurement rather than a judgement — and it moved by 69 points of 150 on wording
+measurement rather than a judgment — and it moved by 69 points of 150 on wording
 choices that all looked reasonable when written.
 
 Nor does general capability predict it. The strongest model in the set was the
@@ -1385,13 +1385,13 @@ makes three attempts worse than one. Ratchet's scorers are deterministic: the
 gates pass, the tests pass, the diff is non-empty. If that cannot express your
 definition of done, the missing piece is an ack gate.
 
-**It does not fuzzy-match edits.** Whitespace and Unicode normalisation, yes: a
+**It does not fuzzy-match edits.** Whitespace and Unicode normalization, yes: a
 quantised model retyping code produces curly quotes and en-dashes, and that is a
 transcription artifact. Similarity matching, no. Every mature editor we examined
 either avoids it or has disabled it in place. An edit applied to code that
 merely resembles the target is a corruption that passes review.
 
-**It does not summarise its own uncertainty away.** A blocked iteration gives
+**It does not summarize its own uncertainty away.** A blocked iteration gives
 you the executor's own sentence. A stopped run gives you which of the four
 failure types stopped it. Ratchet would rather report a confusing truth than a
 clean number.

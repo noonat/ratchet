@@ -84,7 +84,7 @@ func TestTagSurvivesWhitespaceAndLineEndings(t *testing.T) {
 	}
 }
 
-// TestTagDistinguishesRealChanges is the other half: normalising must not make the
+// TestTagDistinguishesRealChanges is the other half: normalizing must not make the
 // tag blind to a change that matters. Leading whitespace is content, because in
 // Python it is syntax.
 func TestTagDistinguishesRealChanges(t *testing.T) {
@@ -174,7 +174,7 @@ func TestTagOnAdversarialShapes(t *testing.T) {
 }
 
 // TestNormalizeIsIdempotent matters because the tag is recomputed on every resolve.
-// If normalising twice differed from normalising once, a file would stop matching
+// If normalizing twice differed from normalizing once, a file would stop matching
 // its own anchor after a round trip through the renderer.
 func TestNormalizeIsIdempotent(t *testing.T) {
 	inputs := []string{

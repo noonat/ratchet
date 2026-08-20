@@ -192,28 +192,32 @@ Iteration 1 writes the Makefile, so closing it is the first proof the gate runs.
 
 ## Iteration 3: resolve, apply, refuse
 
-- [ ] Write `internal/edit/resolve.go`. Recompute the tag and compare it
+- [x] Write `internal/edit/resolve.go`. Recompute the tag and compare it
       exactly. On a mismatch, check whether the file is byte-for-byte the
       snapshot text. Name the correct anchor only in that case. Otherwise show
       the current lines and require a fresh read
-- [ ] Refuse an anchor no read in this session issued, and refuse any line
+- [x] Refuse an anchor no read in this session issued, and refuse any line
       outside `Snapshot.Lines`. Give each its own error
-- [ ] Write `internal/edit/apply.go`. Resolve the anchor, apply the hunks in
+- [x] Write `internal/edit/apply.go`. Resolve the anchor, apply the hunks in
       memory, convert seven dash variants, eight quote variants and thirteen
       space variants to ASCII, and return the result without writing to disk
-- [ ] Return three things from a refused edit: the error, the text the edit
+- [x] Return three things from a refused edit: the error, the text the edit
       would have produced, and the file as it stands. SWE-agent's ablation is
       the argument for all three. Without the error the model misdiagnoses;
       without its own attempt it sends the same edit again; without the current
       file it edits against a memory four turns old
-- [ ] Test every refusal path, and assert in each that the file on disk did not
+- [x] Test every refusal path, and assert in each that the file on disk did not
       change
+
+> **Completed** 2026-08-19 23:53 UTC
+>
+> - `make check` — 462ms
 
 ## Iteration 4: build the corpus
 
 Assembling the test data is its own kind of work, and the sizing rule this
-project measured says an iteration does one kind. It also has no judgement in
-it, so it closes on commands alone.
+project measured says an iteration does one kind. It also has no judgment in it,
+so it closes on commands alone.
 
 - [ ] Add `journals/` with a `.gitignore` excluding its contents, and a
       `journals/README.md` naming which harness journals to copy there and why
@@ -245,7 +249,7 @@ required_acks:
 ```
 
 This iteration carries the one ack, because deciding which side of a
-disagreement was wrong is a judgement and not a command.
+disagreement was wrong is a judgment and not a command.
 
 - [ ] Write `cmd/replay-edits`, which reads the corpus and reports per patch
       form how often the applier's outcome matches the recorded verdict
@@ -302,6 +306,38 @@ it belongs once there is a document to hold it.
 - The re-indent repair runs when a patch is applied, not when it is parsed: it
   needs the line being replaced, and only the applier has read the file. It is
   written and tested and nothing calls it until iteration 3.
+
+- Iteration 3's last todo asks for a test asserting the file on disk did not
+  change after each refusal. That test cannot fail: `Apply` takes the file's
+  text and returns text, so there is no path it could write to. What is enforced
+  instead, in `internal/convention`, is that `internal/edit` imports nothing
+  that can reach a file.
+
+- Iteration 3's todo says to check "whether the file is byte-for-byte the
+  snapshot text", and the architecture says byte-identical. The check compares
+  recomputed tags instead. The tag ignores trailing whitespace and line endings
+  on purpose, so that an editor which trims on save does not invalidate an
+  anchor it never saw; comparing bytes refused an edit to an untouched line
+  because another line lost a space, and printed a window byte-identical to what
+  the model had been shown. The branch that names the correct anchor stays safe
+  under the weaker test, because under tag equality the anchor it names is the
+  file's current one.
+
+- Iteration 3's todo asks the applier to convert seven dash variants, eight
+  quote variants and thirteen space variants to ASCII. It converts nothing. The
+  table was specified as "what a Q4 model damages when retyping code", sourced
+  from a survey of other editors that recommends it without citing one that has
+  it. Measured against 19,055 recorded replies, no model introduced any of those
+  characters into a payload. All 336 replies containing one had copied it out of
+  a file that already held it, and 289 scored correct, so the stage would have
+  turned 289 right answers into wrong ones, each looking right in review. The
+  damage that was measured is indentation, 30 replies in 119, and
+  `patch.Reindent` is the repair for it.
+
+- Two refusals can be true of one edit, and the more specific one is returned. A
+  line past the end of the file is both out of range and undisplayed; naming it
+  undisplayed sends the model to re-read a file that will say the same thing,
+  where naming the range lets it correct the address.
 
 - Iteration 1's todo asks for `Snapshot{... Lines map[int]bool}`. The code uses
   `map[int]struct{}`, because a bool implies `false` means something. The todo

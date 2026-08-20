@@ -18,7 +18,7 @@ func TestParseAcceptsBothForms(t *testing.T) {
 			name:  "whole line",
 			reply: "[a/b.ts#1A2B]\nPUT 12.=12:\n-const n = 1;\n+const n = 2;",
 			want: Hunk{
-				Kind: Put,
+				Kind: KindPut,
 				Line: 12,
 				End:  12,
 				Old:  []string{"const n = 1;"},
@@ -29,7 +29,7 @@ func TestParseAcceptsBothForms(t *testing.T) {
 			name:  "line range",
 			reply: "[a/b.ts#1A2B]\nPUT 12.=14:\n-one\n-two\n-three\n+only",
 			want: Hunk{
-				Kind: Put,
+				Kind: KindPut,
 				Line: 12,
 				End:  14,
 				Old:  []string{"one", "two", "three"},
@@ -40,7 +40,7 @@ func TestParseAcceptsBothForms(t *testing.T) {
 			name:  "fragment",
 			reply: "[a/b.ts#1A2B]\nSUB 12:\n-const\n+let",
 			want: Hunk{
-				Kind: Sub,
+				Kind: KindSub,
 				Line: 12,
 				End:  12,
 				Old:  []string{"const"},
@@ -51,7 +51,7 @@ func TestParseAcceptsBothForms(t *testing.T) {
 			name:  "content keeps its leading whitespace",
 			reply: "[a/b.ts#1A2B]\nPUT 3.=3:\n-    return 1\n+    return 2",
 			want: Hunk{
-				Kind: Put,
+				Kind: KindPut,
 				Line: 3,
 				End:  3,
 				Old:  []string{"    return 1"},
@@ -63,7 +63,7 @@ func TestParseAcceptsBothForms(t *testing.T) {
 			path:  "a/b.md",
 			reply: "[a/b.md#1A2B]\nPUT 5.=5:\n-- item\n+- item (checked)",
 			want: Hunk{
-				Kind: Put,
+				Kind: KindPut,
 				Line: 5,
 				End:  5,
 				Old:  []string{"- item"},
@@ -75,7 +75,7 @@ func TestParseAcceptsBothForms(t *testing.T) {
 			path:  "a/b.md",
 			reply: "[a/b.md#1A2B]\nPUT 5.=5:\n-+ added\n++ added twice",
 			want: Hunk{
-				Kind: Put,
+				Kind: KindPut,
 				Line: 5,
 				End:  5,
 				Old:  []string{"+ added"},
@@ -86,7 +86,7 @@ func TestParseAcceptsBothForms(t *testing.T) {
 			name:  "blank lines and trailing space are tolerated",
 			reply: "\n[a/b.ts#1A2B]   \n\nPUT 12.=12:  \n-old\n+new\n\n",
 			want: Hunk{
-				Kind: Put,
+				Kind: KindPut,
 				Line: 12,
 				End:  12,
 				Old:  []string{"old"},

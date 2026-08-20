@@ -105,17 +105,20 @@ internal/agent            the loop: providers, streaming, dispatch, classificati
 internal/anchor           hash-anchored line addressing
 internal/api              the wire schema: --json result types and their mappers
 internal/cli              the Run* actions, one file per command noun
+internal/convention       tests that hold this repo to its own conventions
 internal/drafter          the drafter seat: the five passes, its prompt, revision
 internal/drafter/claude   the subscription path: drives the claude CLI
 internal/drafter/session  the collaboration surface: HTTP, SSE, threads, mockups
 internal/drafter/tool     read, grep, index, bash, write, edit, ask, choose,
                           decide, mockup; also over MCP for a loop we do not own
+internal/edit             resolve an anchor, apply a patch in memory
 internal/executor         the executor seat: its prompt, its budgets
 internal/executor/tool    read, edit, write, bash, revert_file, done, blocked
 internal/gate             gate execution, the mutation sweep, worktrees
 internal/index            the repo index and its language providers
 internal/journal          append-only event log; also the replay source
 internal/notify           the notification channels
+internal/patch            parse the two measured edit forms
 internal/sandbox          engines, container lifecycle, exec, egress rules
 internal/spec             parse and render specs: the ratchet blocks, the state
                           block, the fold that produces status
@@ -125,10 +128,11 @@ main.go                   the only package main; the urfave/cli v3 command tree
 
 **Nothing is public until something needs it.** A package outside `internal/` is
 a compatibility promise, and promising compatibility on a design still moving is
-how you end up maintaining a shape you already regret. `spec` and `anchor` would
-go public first, and are written so the move stays cheap: no globals, no
-dependency on anything else in the module, no assumption that a spec came from a
-file.
+how you end up maintaining a shape you already regret. `spec`, `anchor` and
+`patch` would go public first, and are written so the move stays cheap: no
+globals, no dependency on anything else in the module, no assumption that a spec
+came from a file. `edit` is one step behind them, depending on `anchor` and
+`patch` and on nothing else.
 
 **The two seats are packages and `agent` is not one of them.** Both are
 model-driven loops with providers, streaming, dispatch, classification and
@@ -147,6 +151,7 @@ which is what `ratchet plan` opens.
 main.go → cli → {drafter, executor, gate, index, journal, notify} → {spec, anchor}
        drafter  → {agent, drafter/claude, drafter/session, drafter/tool}
        executor → {agent, executor/tool, sandbox}
+       executor/tool → edit → {anchor, patch}
        cli → api → {spec, journal}
 ```
 
@@ -234,7 +239,7 @@ four standard ones is asking every user to learn a fifth convention.
 On macOS Ratchet uses the XDG paths too rather than
 `~/Library/Application Support`. Apple's answer is right for applications and
 wrong for a command-line tool whose users expect to find their configuration by
-grepping `~/.config`. The environment variables are honoured on every platform,
+grepping `~/.config`. The environment variables are honored on every platform,
 which is also how the tests relocate all of this into a `t.TempDir()`.
 
 SQLite loses on the access patterns. The journal is written append-only and read
@@ -271,7 +276,7 @@ model runs on.
 **An unknown key is an error, not a shrug.** A config that silently ignores what
 you wrote is the same failure as a gate that cannot fail. `doctor` reports the
 file it loaded and the keys it took, and Ratchet refuses to start on a key it
-does not recognise.
+does not recognize.
 
 It holds preferences and never credentials. API keys come from the environment
 or the provider's own store, and the subscription credential lives in its own
@@ -533,7 +538,7 @@ Truncation is never repaired. It is `Protocol`, and the retry gets a smaller
 context.
 
 **A malformed call becomes a tool result carrying the error**, never a dropped
-turn. The model sees its own mistake next turn, and that single behaviour is the
+turn. The model sees its own mistake next turn, and that single behavior is the
 largest correctable gap in a naive harness.
 
 ### Failure classification
@@ -558,7 +563,7 @@ a capability failure and it must never be silent.
 
 ### Repetition, not volume
 
-The loop guard keys on `(tool, normalised args)`, with a warn state before a
+The loop guard keys on `(tool, normalized args)`, with a warn state before a
 halt state and a counter that resets when a different mistake occurs.
 
 Thresholds come from measurement. Passing iterations reached ten consecutive
@@ -741,9 +746,9 @@ A notification fires the instant the call is made, so the wait starts when you
 learn about it rather than when the model gives up.
 
 `ErrUnanswered` has a documented response: record a decision and continue, or
-stop and list what is outstanding. Which is the behaviour already specified for
-a decision with a defensible default, so the timeout branch collapses into a
-rule that exists.
+stop and list what is outstanding. Which is the behavior already specified for a
+decision with a defensible default, so the timeout branch collapses into a rule
+that exists.
 
 How the wait is implemented differs; the contract does not. On Ratchet's own
 loop we own the message list, so a long wait suspends the session to the journal
@@ -905,7 +910,7 @@ This is what `oh-my-pi` does, read from source rather than inferred: it splits
 the same two cases on whether the tag resolves to a recorded snapshot, and
 neither branch returns a replacement. Its unrecognised-tag message is explicit —
 _"never invent the tag and never reuse one from a prior session."_ Its
-recognised-tag message says re-read. Ratchet's first branch is the one addition,
+recognized-tag message says re-read. Ratchet's first branch is the one addition,
 and it is licensed only by the byte-identical check that oh-my-pi's coarser
 file-level tag does not need to make.
 
@@ -960,7 +965,7 @@ Four stages, and nothing is written until the last.
 Nothing rewrites what the model wrote. An earlier version of this document put a
 normalize stage between apply and validate, converting seven dash variants,
 eight quote variants and thirteen space variants to ASCII on the grounds that
-this is the damage a quantized model does when retyping code. Measured against
+this is the damage a quantised model does when retyping code. Measured against
 19,055 recorded replies, it is not: no model introduced one. Every reply
 containing such a character had copied it out of a file that already held it,
 and 289 of those scored correct, so the stage would have converted 289 right
@@ -1121,7 +1126,7 @@ So Ratchet does not claim containment it does not have.
 ```
 $ ratchet doctor
 
-  config    ~/.config/ratchet/config.json  4 keys · all recognised
+  config    ~/.config/ratchet/config.json  4 keys · all recognized
   engine    podman 5.4.0 · rootless
   uid       explicit uidmap        container root + host uid 1000 as 1000
   egress    allowlist              NET_ADMIN dropped before the agent starts
@@ -1135,7 +1140,7 @@ The warning line is the point. A sandbox that silently provides less than this
 document promises is worse than one that provides less and says so, because the
 first kind gets trusted.
 
-SELinux needs the mount relabelled. On Fedora and RHEL a bind mount without
+SELinux needs the mount relabeled. On Fedora and RHEL a bind mount without
 `relabel=shared` is denied by policy, and the denial surfaces inside the
 container as permission errors that read like application bugs. Detected once,
 at `doctor` time.
@@ -1401,7 +1406,7 @@ The reason for server rendering is that **the server already owns every piece of
 state the page displays.** The spec is a file, threads are journal events,
 status is a fold, headroom comes from the index. A client framework would hold a
 second copy and reconcile it against SSE, and a second copy that can disagree
-with the first is the failure this project is organised against.
+with the first is the failure this project is organized against.
 
 The interactions are the wrong shape for a component tree anyway. Every one is
 post a small thing, get a fragment, swap it in. htmx is fourteen kilobytes and
@@ -1640,7 +1645,7 @@ The scorers are deterministic: the gates pass, the tests pass, the diff is
 non-empty. If that cannot express your definition of done, the missing piece is
 an ack gate and a person.
 
-Similarity-matched edits. Whitespace and Unicode normalisation yes. Fuzzy
+Similarity-matched edits. Whitespace and Unicode normalization yes. Fuzzy
 matching no, for the reason every mature editor reached independently: an edit
 applied to code that merely resembles the target is a corruption that passes
 review.

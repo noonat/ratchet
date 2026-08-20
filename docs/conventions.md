@@ -1,7 +1,7 @@
 # Conventions
 
 How code in this repo is written. Each entry says whether it is enforced or left
-to judgement, because the difference decides how much it can be relied on.
+to judgment, because the difference decides how much it can be relied on.
 
 A convention that is only written down gets violated. That is measured here, not
 assumed: in the harness that preceded this repo, a trap was recorded in a
@@ -16,6 +16,9 @@ bodies.
 
 **Get to the point.** Never use two words where one will do.
 
+**American spelling.** normalize, not normalise. behavior, color, judgment,
+license, center. Quoted text keeps whatever the source wrote.
+
 **Avoid jargon.** Use a technical term when it is the right term. Do not
 compress meaning into an idiom the reader has to unpack.
 
@@ -23,6 +26,22 @@ compress meaning into an idiom the reader has to unpack.
 problem, not the vocabulary.
 
 **Use simple language and an imperative tone.**
+
+**State the happy path. Leave the rest implied.** A positive followed by its
+inverse makes the reader parse both halves and reconcile them before the
+sentence means anything, and the second half rarely adds a fact. "Package edit
+resolves an anchor and applies a patch in memory" beats the same line ending
+"and refuses". "Parse the two measured edit forms" beats it ending "refuse the
+rest".
+
+This matters most in a summary: the first line of a doc comment, an entry in a
+list. Understanding the happy path well is worth more than knowing every
+exception, and the exception has room lower down.
+
+Name the alternative where the contrast is the point, which is where a reader
+would otherwise assume the wrong thing. "It exists for provenance, not for
+correctness" earns both halves, because an anchor that matches the file looks
+like proof and is not.
 
 **Never write in the first or second person, and never name a person.** No "I",
 "we", "us", "you", "your", or anyone's name, in documentation, comments, commit
@@ -52,12 +71,12 @@ so the next person adds a statement and reformats the whole thing, and the diff
 hides what changed. Function literals are exempt: a small transform passed as an
 argument is the one place the compact form is clearer.
 
-**Judgement.** A doc comment sits on the thing it describes. `xxHash32`'s
-comment was attached to the const block above it, where a reader looking at the
-function never sees it.
+**Judgment.** A doc comment sits on the thing it describes. `xxHash32`'s comment
+was attached to the const block above it, where a reader looking at the function
+never sees it.
 
-**Judgement.** A struct literal that does not fit on one line puts every field
-on its own line, keyed, with a trailing comma and the brace alone:
+**Judgment.** A struct literal that does not fit on one line puts every field on
+its own line, keyed, with a trailing comma and the brace alone:
 
 ```go
 return nil, &Fault{
@@ -70,7 +89,7 @@ Not `&Fault{Line: n,` with the rest hanging below. The keyed form lets gofmt
 align the values, adding a field touches one line instead of reflowing the
 literal, and the closing brace shows where the value ends.
 
-**Judgement.** Wrap a call chain after the dot, with the chain indented, rather
+**Judgment.** Wrap a call chain after the dot, with the chain indented, rather
 than by breaking the argument list:
 
 ```go
@@ -82,7 +101,7 @@ Breaking after the opening paren separates a matcher from its message and reads
 as two statements. Long lines are acceptable in tests; a long line in production
 code usually means the expression wants a name.
 
-**Judgement.** Do not wrap to hit a margin. Go tolerates long lines, and a
+**Judgment.** Do not wrap to hit a margin. Go tolerates long lines, and a
 120-character call holding one argument and one string reads better whole than
 split. Never break a string constant across lines for width: the reader then has
 to reassemble the message to know what it says.
@@ -101,17 +120,49 @@ return nil, faultAt(
 
 The same shape as a struct literal, for the same reasons.
 
-**Judgement.** Comments say why, not what. A comment that restates the code is
+**An argument list wraps all or nothing.** If a newline falls between two
+arguments, every argument goes on its own line and the first break is after the
+open paren. If not, no argument gets a line of its own. The half-wrapped form,
+where the first argument stays beside the paren and the rest hang under it, is
+what this rules out: the call's name and an argument share a line, so the reader
+has to find where the list starts.
+
+A newline _inside_ an argument does not count, which is what makes the common
+case legal:
+
+```go
+rows = append(rows, row{
+    text: line,
+    end:  end,
+})
+```
+
+The braces are already a delimited block, so they wrap themselves without
+breaking the argument list. This has nothing to do with the literal coming last:
+`Apply(reads, patch.Patch{…}, file)` is the same shape and equally fine.
+
+**Enforced by `internal/convention`**, because the half-wrapped form was written
+down as wrong twice and produced three times after that.
+
+**Judgment.** Comments say why, not what. A comment that restates the code is
 noise; a comment naming the measurement or the incident behind a decision is the
 only place that information survives. Prefer the incident: "this cost one model
 49 of 50 silently" is checkable, "be careful here" is not.
 
-**Judgement.** A set is `map[T]struct{}`, not `map[T]bool`. A bool implies that
+**Judgment.** An enum's values carry its name: `ReasonNoRead`, not `NoRead`.
+`KindPut` and `SigilMinus`, not `Put` and `Minus`. At the point of use a bare
+`Put` reads as a verb or a variable, and nothing says which of several sets it
+belongs to. The prefix costs four characters and answers both questions.
+
+Prose in comments keeps the name a reader will see elsewhere: the wire format
+writes `PUT`, so a comment says `PUT` and the constant is `KindPut`.
+
+**Judgment.** A set is `map[T]struct{}`, not `map[T]bool`. A bool implies that
 `false` means something, and a reader has to work out whether an absent key and
 a `false` value differ. `struct{}` has no value to misread, so membership is the
 only question the type can answer.
 
-**Judgement.** Vendor a dependency when it must agree byte for byte with someone
+**Judgment.** Vendor a dependency when it must agree byte for byte with someone
 else's implementation forever and it is small. `internal/anchor`'s xxHash32 is
 vendored for that reason and pinned against the reference library's own vectors.
 
@@ -119,6 +170,13 @@ vendored for that reason and pinned against the reference library's own vectors.
 
 Moved here from the architecture document, which describes how the system is
 shaped rather than how its code is written.
+
+**Enforced by `internal/convention`.** A new package is added to the package
+list in [architecture.md](architecture.md) in the change that creates it, with a
+one-line description and its place in the dependency graph. Two packages were
+built without being listed, and the omission was written up as a divergence from
+the design rather than fixed. A list that is missing entries stops being read as
+a list of what exists.
 
 **Stdlib-first.** Git is shelled out to, not linked. The third-party list is
 short and each entry is a decision with a reason.
@@ -163,7 +221,7 @@ context.
 `wrapcheck` stays off. It flags any error crossing a package boundary unwrapped,
 which would force redundant wraps on errors that already have stacks.
 
-**Judgement.** A `Fault` carries a stack, attached where it is constructed. An
+**Judgment.** A `Fault` carries a stack, attached where it is constructed. An
 earlier version of this file argued the opposite, on the grounds that the corpus
 replay produces thousands of faults and a stack on each is noise. That confused
 attaching a stack with printing one. The stack costs a slice of program counters
@@ -222,28 +280,36 @@ anonymous struct is preferred to a declared one.
 ginkgo: `NewWithT(t)`, then `Expect(...).To(...)`. See the replay example in
 [architecture.md](architecture.md).
 
-**Judgement.** Pin against an independent source, not against another copy of
-the same code. The tag vectors came from a sibling implementation in the same
+**Judgment.** Pin against an independent source, not against another copy of the
+same code. The tag vectors came from a sibling implementation in the same
 project; a test pinning one port against another passes on a shared mistake, so
 they were re-verified against the reference library.
 
-**Judgement.** Prove each check can fail _individually_. `NewWithT` fails
+**Judgment.** Prove each check can fail _individually_. `NewWithT` fails
 fatally, so a second assertion in the same subtest never runs once the first has
 failed: the positional-field check above passed its own review only after being
 tested on its own, because the inline-table check beside it had masked it.
 
-**Judgement.** Prove a new gate can fail before trusting a pass from it. Write
+**Judgment.** Prove a new gate can fail before trusting a pass from it. Write
 the violation, watch the gate go red, then remove it. Three checks in the
 predecessor project could not have failed.
 
-**Judgement.** Write that violation from the complaint, not from the
+**Judgment.** Write that violation from the complaint, not from the
 implementation. The subtest check above was proved with a gomega created inside
 the loop, which it caught. The shape that prompted the rule was a gomega created
 _above_ the loop and reused inside, and that passed the gate. A gate proved
 against a violation of its author's choosing tests the author's reading of the
 rule.
 
-**Judgement.** Cover the adversarial shapes, not only the happy path. For
+**Judgment.** When a test cannot fail, test something else.
+
+A spec asked for proof that a refused edit leaves the file alone. The applier
+takes text and returns text, so it has no file to touch and the test passes
+forever. `internal/edit` is checked for imports instead: it may reach `fmt`,
+`strings`, `errors`, `anchor` and `patch`, and nothing else. Adding to that list
+is then a decision someone makes on purpose.
+
+**Judgment.** Cover the adversarial shapes, not only the happy path. For
 anything addressing lines: identical adjacent lines, a one-line file, a file
 ending without a newline, a blank line, and content containing the characters an
 address uses.
@@ -287,8 +353,8 @@ name the claim and say why it was wrong. A silent reversal leaves two
 contradictory statements in the history and no way to tell which one won.
 
 **Draft in phases.** Write it, re-read it, then hand it to a subagent running a
-simple model such as Haiku and ask whether the body gives a reason or summarises
-the diff. Rewrite if it summarises, send it back for a second review, then ask
+simple model such as Haiku and ask whether the body gives a reason or summarizes
+the diff. Rewrite if it summarizes, send it back for a second review, then ask
 for approval.
 
 Use a subagent rather than reading it again yourself. The author cannot see that
@@ -301,12 +367,12 @@ comment.
 
 ## Specs
 
-**Judgement.** Carry the design in the spec, with the rejected alternative
-named. An iteration that passes every size budget and omits the reasoning failed
-eight times slower than its reference run, because the executor reinvented a
-design the author had already rejected.
+**Judgment.** Carry the design in the spec, with the rejected alternative named.
+An iteration that passes every size budget and omits the reasoning failed eight
+times slower than its reference run, because the executor reinvented a design
+the author had already rejected.
 
-**Judgement.** One iteration does one kind of work, and gates on commands
+**Judgment.** One iteration does one kind of work, and gates on commands
 wherever a command can prove it. Reserve an ack for what only a person can
 assert.
 

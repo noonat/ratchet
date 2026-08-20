@@ -16,9 +16,10 @@ var (
 	reSub = regexp.MustCompile(`^SUB\s+(\d+)\s*:$`)
 )
 
-// Parse reads a reply. It refuses rather than guessing: every return other than a
-// complete patch is a Fault naming what is wrong, because a parser that repairs
-// silently turns a model's mistake into a file nobody reviewed.
+// Parse reads a reply and returns the patch it describes.
+//
+// Anything else is a Fault naming what is wrong. A parser that repairs silently
+// turns a model's mistake into a file nobody reviewed.
 //
 // Blank lines and surrounding whitespace are tolerated.
 func Parse(reply string) (*Patch, error) {
@@ -49,7 +50,7 @@ func Parse(reply string) (*Patch, error) {
 		// A PUT names a range, so the `-` rows have to account for all of it. Two
 		// rows under `PUT 10.=12:` is a reply that looks complete and describes a
 		// file that does not exist.
-		if cur.Kind == Put {
+		if cur.Kind == KindPut {
 			want := cur.End - cur.Line + 1
 			if len(cur.Old) != want {
 				return faultAt(curLine, fmt.Sprintf("`PUT %d.=%d:` covers %d lines, so it needs %d `-` rows and has %d", cur.Line, cur.End, want, want, len(cur.Old)))
@@ -57,7 +58,7 @@ func Parse(reply string) (*Patch, error) {
 		}
 		// A SUB replaces one fragment inside one line, so more than one row either
 		// side has no defined meaning and the applier could only guess.
-		if cur.Kind == Sub && (len(cur.Old) != 1 || len(cur.New) != 1) {
+		if cur.Kind == KindSub && (len(cur.Old) != 1 || len(cur.New) != 1) {
 			return faultAt(curLine, "`SUB` replaces one fragment, so it takes one `-` row and one `+` row")
 		}
 		// Addresses are original line numbers, so hunks that overlap or run
@@ -106,7 +107,7 @@ func Parse(reply string) (*Patch, error) {
 			if from < 1 || to < from {
 				return nil, faultAt(n, "line numbers run from 1 and the range cannot end before it starts")
 			}
-			cur, curLine = &Hunk{Kind: Put, Line: from, End: to}, n
+			cur, curLine = &Hunk{Kind: KindPut, Line: from, End: to}, n
 			continue
 		}
 		if m := reSub.FindStringSubmatch(trimmed); m != nil {
@@ -117,7 +118,7 @@ func Parse(reply string) (*Patch, error) {
 			if at < 1 {
 				return nil, faultAt(n, "line numbers run from 1")
 			}
-			cur, curLine = &Hunk{Kind: Sub, Line: at, End: at}, n
+			cur, curLine = &Hunk{Kind: KindSub, Line: at, End: at}, n
 			continue
 		}
 

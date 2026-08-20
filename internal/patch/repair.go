@@ -2,7 +2,7 @@ package patch
 
 import "strings"
 
-// Repairs are fixes applied to a reply instead of refusing it. A repair uses
+// Repairs are the fixes a tool may apply to a reply before using it. A repair uses
 // information the tool already holds, which is what separates one from the
 // similarity matching this pipeline excludes: aider shipped an edit-distance
 // matcher at a threshold of 0.8 and disabled it with a bare `return`, because an

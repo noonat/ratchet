@@ -406,3 +406,114 @@ func isStructSlice(expr ast.Expr) bool {
 	_, anonymous := arr.Elt.(*ast.StructType)
 	return anonymous
 }
+
+// TestEveryPackageIsInTheArchitecture keeps the design document's package list a
+// list of what exists.
+//
+// It drifted twice before this check: `internal/patch` and `internal/edit` were
+// built and the list did not mention either, so the omission got written up as a
+// divergence instead of being fixed. A list missing entries stops being read as a
+// list, and the next person adds a package without looking at it.
+func TestEveryPackageIsInTheArchitecture(t *testing.T) {
+	g := NewWithT(t)
+	root, err := filepath.Abs("../..")
+	g.Expect(err).NotTo(HaveOccurred())
+
+	doc, err := os.ReadFile(filepath.Join(root, "docs", "architecture.md"))
+	g.Expect(err).NotTo(HaveOccurred())
+
+	packages := map[string]struct{}{}
+	err = filepath.Walk(filepath.Join(root, "internal"), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || !strings.HasSuffix(path, ".go") {
+			return nil
+		}
+		rel, rerr := filepath.Rel(root, filepath.Dir(path))
+		if rerr != nil {
+			return rerr
+		}
+		packages[filepath.ToSlash(rel)] = struct{}{}
+		return nil
+	})
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(packages).NotTo(BeEmpty(), "found no packages to check")
+
+	for pkg := range packages {
+		t.Run(pkg, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(string(doc)).
+				To(ContainSubstring(pkg), "this package is missing from the package list in docs/architecture.md")
+		})
+	}
+}
+
+// TestArgumentListsWrapAllOrNothing enforces the shape a wrapped call takes.
+//
+// The rule turns on one question: does a newline fall between two arguments? If it
+// does, every argument goes on its own line and the first break is after the open
+// paren. If it does not, no argument gets a line of its own.
+//
+// A newline inside an argument does not count, which is what makes the common case
+// legal. The braces of a composite literal or a function literal are already a
+// delimited block, so they wrap themselves without breaking the argument list:
+//
+//	rows = append(rows, row{
+//	    text: line,
+//	    end:  end,
+//	})
+//
+// That has nothing to do with the literal being last. `Apply(reads, patch.Patch{…},
+// file)` is the same shape and equally fine, because the newlines are all inside the
+// second argument. An earlier version of this check required the literal to come
+// last, which was invented rather than derived, and it rejected two call sites that
+// were correct.
+//
+// What is rejected is the half-wrapped form, where the first argument stays beside
+// the paren and the rest hang under it. The call's name and an argument share a line,
+// so the reader has to find where the list starts. That shape was written down as
+// wrong twice and produced three times after.
+func TestArgumentListsWrapAllOrNothing(t *testing.T) {
+	fset, files := goFiles(t)
+	for name, file := range files {
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(halfWrappedCalls(fset, file)).
+				To(BeEmpty(), "an argument list breaks after the open paren and at every comma, or at neither")
+		})
+	}
+}
+
+// halfWrappedCalls reports calls whose argument list is partly broken across lines.
+func halfWrappedCalls(fset *token.FileSet, file *ast.File) []string {
+	var out []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok || len(call.Args) == 0 {
+			return true
+		}
+		// A break between two arguments, counted where the comma is: the next argument
+		// starting on a later line than the previous one ended.
+		breaks := 0
+		for i := 0; i+1 < len(call.Args); i++ {
+			if fset.Position(call.Args[i+1].Pos()).Line > fset.Position(call.Args[i].End()).Line {
+				breaks++
+			}
+		}
+		afterParen := fset.Position(call.Args[0].Pos()).Line > fset.Position(call.Lparen).Line
+		gaps := len(call.Args) - 1
+
+		switch {
+		case breaks == 0 && !afterParen:
+			// Nothing is broken, which is the one-line form however long the arguments
+			// themselves run.
+		case breaks == gaps && afterParen:
+			// Everything is broken, which is the wrapped form.
+		default:
+			out = append(out, fmt.Sprintf("%s: argument list is partly wrapped", fset.Position(call.Lparen)))
+		}
+		return true
+	})
+	return out
+}
