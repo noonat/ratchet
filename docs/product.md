@@ -1338,7 +1338,6 @@ $ ratchet qualify glm-4.7-flash:32k
 
   qualified, with adjustments:
     edit syntax      header form        (diff form unusable: 0/30)
-    repairs enabled  reindent           (recovers 22 of 23 body failures)
     read window      400 lines
 
   Written to .ratchet/models/glm-4.7-flash-32k.json
@@ -1360,8 +1359,8 @@ that managed 1 of 30 on another form the rest of the set handled comfortably.
 The optimistic half is that a well-chosen form did win for everyone: the best
 scored at least 28 of 30 on every model, with no edit landing in the wrong place.
 So this is not an argument that every model needs its own interface. It is an
-argument that which interface that is, and which repairs it needs alongside, is a
-measurement rather than a judgment — and it moved by 69 points of 150 on wording
+argument that which interface that is, and what it must check, is a measurement
+rather than a judgment — and it moved by 69 points of 150 on wording
 choices that all looked reasonable when written.
 
 Nor does general capability predict it. The strongest model in the set was the

@@ -979,8 +979,15 @@ answers into wrong ones and each would have looked right in review.
 
 The damage that was measured is indentation. glm reproduced a line correctly and
 mangled its leading whitespace 22 times in 30, and 30 replies in 119 across four
-models did the same. The repair for that is re-indentation from the line being
-replaced, which uses what the tool already knows rather than guessing.
+models did the same. Checking the old row catches it: of 240 recorded replies
+whose replacement lost its indentation, the old row had lost it in 240, so those
+replies are refused rather than repaired.
+
+Both repairs this pipeline once planned are gone for that reason. Re-indentation
+cannot fire behind a check on the old row, and filling in a missing sigil needs
+a body whose rows can only mean one thing, which is not this form. What a reply
+gets instead is a refusal naming the line, and a corrective turn recovers about
+45% of diagnosed failures.
 
 Similarity matching is not in this pipeline and will not be: aider has an
 edit-distance matcher at threshold 0.8 and disabled it with a bare `return`, and
