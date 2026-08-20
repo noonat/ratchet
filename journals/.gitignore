@@ -1,0 +1,5 @@
+# The journals themselves are not committed: they hold 70MB of prompt text the
+# applier never reads, and `testdata/fixtures.jsonl` carries everything it does.
+*
+!.gitignore
+!README.md

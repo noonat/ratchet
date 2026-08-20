@@ -24,6 +24,41 @@ not become work it tracks.
 - Replay cassettes need a home and a naming convention before there are more
   than a handful.
 
+## Replay fixtures
+
+- **The journals come from outside this repo, and their names show it.**
+  `ratchet qualify <model>` is already designed to run a model against these
+  interfaces and score it per form, which is the same measurement a journal
+  holds. Once it exists it should write them, and `journals/README.md` stops
+  asking a person to copy files out of a harness that will not be here.
+
+- **Decide whether the replay wants distinct replies or a frequency-weighted
+  sample.** 1,852 of the 3,789 committed records repeat an earlier record
+  exactly: the same form, fixture, line, reply and outcome. Several models
+  answer a simple rename identically, and the same case appears in more than one
+  run.
+
+  Which is correct depends on what iteration 5 asks. A test requiring agreement
+  on every record gains nothing from a duplicate and pays for it in runtime. A
+  report of how often the applier agrees is frequency-weighted with them and
+  coverage-weighted without, and those are different numbers. Deduplicating on
+  that key would more than halve the file, so it is worth settling before the
+  report is written rather than after.
+
+- **Rename the journals when that happens.** `edit-candidates`,
+  `edit-conclusive` and `edit-sub-v2` say where a run sat in a sequence of
+  attempts rather than what it measured, and `conclusive` was a hope rather than
+  a description. `edit-gptoss-4k` and `edit-think-low-4k` name a condition and
+  have held up. A name that lasts says what varied: the models, the forms, the
+  fixtures, the output cap.
+
+  Renaming is not free today. The fixtures header keys on the file name, so a
+  renamed journal reads as a new source while its records under the old name are
+  kept as an absent one, and the committed file silently doubles. Neither guard
+  catches it: the hashes are unchanged and the count grows rather than drops.
+  Detecting it is cheap, because the hash is already recorded. A present journal
+  whose hash matches an absent recorded source under another name is a rename.
+
 ## Open questions carried over
 
 - Does an anchor need to survive a file being renamed? Today it does not, and a

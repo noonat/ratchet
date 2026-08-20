@@ -14,16 +14,16 @@ import (
 func TestReadsKeepsTheLatest(t *testing.T) {
 	g := NewWithT(t)
 	reads := NewReads()
-	first := MintAll("one\n")
-	second := MintAll("one\ntwo\n")
+	superseded := MintAll("one\n")
+	latest := MintAll("one\ntwo\n")
 
-	reads.Record("a/b.ts", first)
-	reads.Record("a/b.ts", second)
+	reads.Record("a/b.ts", superseded)
+	reads.Record("a/b.ts", latest)
 
 	got, issued := reads.Issued("a/b.ts")
 	g.Expect(issued).To(BeTrue())
-	g.Expect(got.Tag).To(Equal(second.Tag))
-	g.Expect(got.Tag).NotTo(Equal(first.Tag), "the fixture has to distinguish the two reads")
+	g.Expect(got.Tag).To(Equal(latest.Tag))
+	g.Expect(got.Tag).NotTo(Equal(superseded.Tag), "the fixture has to distinguish the two reads")
 }
 
 func TestReadsHasNothingForAnUnreadPath(t *testing.T) {

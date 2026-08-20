@@ -219,28 +219,33 @@ Assembling the test data is its own kind of work, and the sizing rule this
 project measured says an iteration does one kind. It also has no judgment in it,
 so it closes on commands alone.
 
-- [ ] Add `journals/` with a `.gitignore` excluding its contents, and a
+- [x] Add `journals/` with a `.gitignore` excluding its contents, and a
       `journals/README.md` naming which harness journals to copy there and why
       they are not committed
-- [ ] Write `internal/fixture/distill.go` and a `make fixtures` target. It reads
+- [x] Write `internal/fixture/distill.go` and a `make fixtures` target. It reads
       `journals/*.jsonl` and writes `testdata/fixtures.jsonl`, keeping only the
       source journal name, the patch form, the line number, the original line,
       the wanted line, the reply text and the recorded verdict
-- [ ] Make the target additive. Regenerate the records of every journal present
+- [x] Make the target additive. Regenerate the records of every journal present
       in `journals/`, keep the records of every journal that is absent, and
       write the result sorted so two runs over the same inputs produce identical
       bytes
-- [ ] Record each source journal's name, SHA-256 and record count in a header
+- [x] Record each source journal's name, SHA-256 and record count in a header
       line. Refuse to write when a present journal's hash differs from the
       recorded one, or when the merge would drop records, unless given
       `FORCE=1`. These two catch a journal that was rescored and fixtures about
       to lose data
-- [ ] Test the fresh-clone case directly: with `journals/` empty,
+- [x] Test the fresh-clone case directly: with `journals/` empty,
       `make fixtures` must leave `testdata/fixtures.jsonl` byte-identical. The
       gitignore creates that case, and it is the one that would otherwise
       destroy them
-- [ ] Commit `testdata/fixtures.jsonl` and write `testdata/README.md` saying the
+- [x] Commit `testdata/fixtures.jsonl` and write `testdata/README.md` saying the
       file was extracted from those journals rather than written by hand
+
+> **Completed** 2026-08-20 05:33 UTC
+>
+> - `make check` — 561ms
+
 
 ## Iteration 5: replay the fixtures and settle the disagreements
 
@@ -339,6 +344,25 @@ it belongs once there is a document to hold it.
   line past the end of the file is both out of range and undisplayed; naming it
   undisplayed sends the model to re-read a file that will say the same thing,
   where naming the range lets it correct the address.
+
+- Iteration 4's todo says to keep only seven fields. The record keeps an eighth,
+  the fixture name, because it carries the language and nothing else in the
+  record does. Whether re-indentation may run is a question about the language,
+  so a replay without it cannot reproduce that decision.
+
+- The same iteration says it has no judgment in it. It has two. Which journals
+  to copy is one, answered in `journals/README.md`. The other is that the
+  distiller keeps only the two forms this repo parses and only the `edit` probe:
+  a reply in one of the other nine forms would be refused for its syntax, and
+  the other probes record several lines or a delimiter position rather than one
+  line and one expected result, so neither can be checked against a single-line
+  expectation.
+
+- The architecture calls `main.go` the only package main and puts it at the repo
+  root. There is no root `main.go`: the binary is `cmd/ratchet`, and
+  `make fixtures` adds `cmd/distill`. Two commands rather than one, because the
+  distiller reads a gitignored directory and has no place in the command tree a
+  user drives.
 
 - Iteration 1's todo asks for `Snapshot{... Lines map[int]bool}`. The code uses
   `map[int]struct{}`, because a bool implies `false` means something. The todo

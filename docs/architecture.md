@@ -114,6 +114,7 @@ internal/drafter/tool     read, grep, index, bash, write, edit, ask, choose,
 internal/edit             resolve an anchor, apply a patch in memory
 internal/executor         the executor seat: its prompt, its budgets
 internal/executor/tool    read, edit, write, bash, revert_file, done, blocked
+internal/fixture          distill harness journals into replay fixtures
 internal/gate             gate execution, the mutation sweep, worktrees
 internal/index            the repo index and its language providers
 internal/journal          append-only event log; also the replay source

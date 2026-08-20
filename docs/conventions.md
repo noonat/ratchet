@@ -163,6 +163,23 @@ belongs to. The prefix costs four characters and answers both questions.
 Prose in comments keeps the name a reader will see elsewhere: the wire format
 writes `PUT`, so a comment says `PUT` and the constant is `KindPut`.
 
+**Judgment.** Do not name a thing for its position in the code. `first` and
+`second` holding two snapshots say only which line declared them, which the
+reader can already see.
+
+Name what differs. Two builds of the same file are `built` and `rebuilt`; two
+reads of one path are `superseded` and `latest`. The name then carries the
+reason both exist.
+
+Where nothing differs, number them: `pass1` and `pass2` over identical inputs,
+`write1` and `write2` from the same value. Numbering is honest about two
+instances of one thing, where an ordinal implies a distinction that is not
+there.
+
+An ordinal is fine when position is the meaning. `first := around - span` is the
+first line to display, and that is what it is, which is also why this cannot be
+a blocklist: the same word is right in one place and empty in another.
+
 **Judgment.** A set is `map[T]struct{}`, not `map[T]bool`. A bool implies that
 `false` means something, and a reader has to work out whether an absent key and
 a `false` value differ. `struct{}` has no value to misread, so membership is the
