@@ -123,6 +123,21 @@ Breaking after the opening paren separates a matcher from its message and reads
 as two statements. Long lines are acceptable in tests; a long line in production
 code usually means the expression wants a name.
 
+**Judgment.** `if err := f(); err != nil` earns its compactness on a short call
+and loses it on a long one. Past about a hundred characters the reader has to
+find the semicolon before knowing what is being tested, so assign on one line
+and test on the next:
+
+```go
+_, err := fmt.Fprintf(w, header, "form", "replies", "judged", "agreement", "distinct", "agreement")
+if err != nil {
+    return err
+}
+```
+
+The compact form stays for `if err := close(); err != nil`, where nothing is
+hidden.
+
 **Judgment.** Do not wrap to hit a margin. Go tolerates long lines, and a
 120-character call holding one argument and one string reads better whole than
 split. Never break a string constant across lines for width: the reader then has

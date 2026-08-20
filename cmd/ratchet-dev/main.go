@@ -17,6 +17,7 @@ import (
 	"github.com/urfave/cli/v3"
 
 	"ratchet/internal/dev/fixture"
+	"ratchet/internal/dev/replay"
 )
 
 func main() {
@@ -39,6 +40,7 @@ func run() error {
 		Usage: "tooling for working on ratchet, run from the repository root",
 		Commands: []*cli.Command{
 			fixturesCmd(),
+			replayCmd(),
 		},
 	}
 	return cmd.Run(ctx, os.Args)
@@ -57,6 +59,23 @@ func fixturesCmd() *cli.Command {
 		},
 		Action: func(ctx context.Context, c *cli.Command) error {
 			return fixture.Refresh(c.Bool("force"), os.Stdout)
+		},
+	}
+}
+
+// replayCmd reports how often the applier agrees with the harness.
+func replayCmd() *cli.Command {
+	return &cli.Command{
+		Name:  "replay",
+		Usage: "report how often the applier reaches the harness's verdict, per patch form",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "disagreements",
+				Usage: "print every disagreement, which is what adjudicating one needs",
+			},
+		},
+		Action: func(ctx context.Context, c *cli.Command) error {
+			return replay.Summarise(os.Stdout, c.Bool("disagreements"))
 		},
 	}
 }

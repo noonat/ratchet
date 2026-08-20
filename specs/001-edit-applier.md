@@ -246,7 +246,6 @@ so it closes on commands alone.
 >
 > - `make check` — 561ms
 
-
 ## Iteration 5: replay the fixtures and settle the disagreements
 
 ```backlog
@@ -257,13 +256,18 @@ required_acks:
 This iteration carries the one ack, because deciding which side of a
 disagreement was wrong is a judgment and not a command.
 
-- [ ] Write `cmd/replay-edits`, which reads the fixtures and reports per patch
+- [x] Write `cmd/replay-edits`, which reads the fixtures and reports per patch
       form how often the applier's outcome matches the recorded verdict
-- [ ] Add `go test ./internal/edit -run TestAgainstFixtures`, which requires
+- [x] Add `go test ./internal/edit -run TestAgainstFixtures`, which requires
       agreement on every record. Keep a checked-in list of settled exceptions,
       each with one line saying which side was wrong and why
-- [ ] Settle every disagreement the first run reports. For each, record whether
+- [x] Settle every disagreement the first run reports. For each, record whether
       the applier or the scorer was wrong, and fix that side
+
+> **Completed** 2026-08-20 06:53 UTC
+>
+> - acks: disagreements-adjudicated
+> - `make check` — 519ms
 
 ## Iteration 6: the tool surface
 
@@ -359,10 +363,35 @@ it belongs once there is a document to hold it.
   expectation.
 
 - The architecture calls `main.go` the only package main and puts it at the repo
-  root. There is no root `main.go`: the binary is `cmd/ratchet`, and
-  `make fixtures` adds `cmd/distill`. Two commands rather than one, because the
-  distiller reads a gitignored directory and has no place in the command tree a
-  user drives.
+  root. There is no root `main.go`: the binary is `cmd/ratchet`, and the tooling
+  is `cmd/ratchet-dev`. Two binaries rather than one, because that tooling reads
+  a gitignored directory and has no place in the command tree a user drives.
+
+- 1,852 of the 3,789 fixtures repeat an earlier record exactly, and the question
+  of whether to keep them was left to this iteration. They are kept, and the
+  report gives two agreements instead of one.
+
+  Measured, the two differ by about two and a half points, and the duplicates
+  sit in the records both sides get right: weighting by how often a reply was
+  sent gives 97.5% for `put_diff_checked`, counting each distinct reply once
+  gives 95.1%. The first is what a real run would meet, since an easy rename
+  four models answer identically is four times as common as a hard one. The
+  second is what coverage means, because a common easy case cannot hide a rare
+  disagreement behind it. Reporting one alone invites it to be read as the
+  other.
+
+  Removing the duplicates from the file was the alternative and is a one-way
+  door: the frequency is evidence, and deduplicating at report time costs one
+  pass. The gate is indifferent either way, 67 distinct disagreements against 68
+  records.
+
+- Iterations 4 and 5 name `internal/fixture/distill.go` and `cmd/replay-edits`.
+  Both live under `internal/dev/` now, behind one `cmd/ratchet-dev` with
+  `fixtures` and `replay` subcommands. None of it is part of what a user
+  installs: the fixtures belong to this repository and the journals are
+  gitignored, so a subcommand of `ratchet` would be a promise that fails on any
+  machine that just installed the binary. Two binaries make that structural
+  instead of a convention.
 
 - Iteration 1's todo asks for `Snapshot{... Lines map[int]bool}`. The code uses
   `map[int]struct{}`, because a bool implies `false` means something. The todo

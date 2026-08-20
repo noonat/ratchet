@@ -109,6 +109,7 @@ internal/api              the wire schema: --json result types and their mappers
 internal/cli              the Run* actions, one file per command noun
 internal/convention       tests that hold this repo to its own conventions
 internal/dev/fixture      distill harness journals into replay fixtures
+internal/dev/replay       replay recorded replies through the applier
 internal/drafter          the drafter seat: the five passes, its prompt, revision
 internal/drafter/claude   the subscription path: drives the claude CLI
 internal/drafter/session  the collaboration surface: HTTP, SSE, threads, mockups
@@ -155,6 +156,8 @@ cmd/ratchet → cli → {drafter, executor, gate, index, journal, notify} → {s
     drafter       → {agent, drafter/claude, drafter/session, drafter/tool}
     executor      → {agent, executor/tool, sandbox}
     executor/tool → edit → {anchor, patch}
+
+cmd/ratchet-dev → dev/replay → {dev/fixture, edit, anchor, patch}
 ```
 
 An indented line expands a name from the line above it. `drafter` and `executor`

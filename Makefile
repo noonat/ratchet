@@ -57,3 +57,6 @@ check: build lint test ## build, lint, test — what a gate runs
 fixtures: ## rebuild testdata/fixtures.jsonl from journals/ (FORCE=1 to accept a change)
 	go run ./cmd/ratchet-dev fixtures $(if $(FORCE),--force,)
 
+.PHONY: replay
+replay: ## report how often the applier agrees with the harness (DETAIL=1 for each disagreement)
+	go run ./cmd/ratchet-dev replay $(if $(DETAIL),--disagreements,)

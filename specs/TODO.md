@@ -32,19 +32,6 @@ not become work it tracks.
   holds. Once it exists it should write them, and `journals/README.md` stops
   asking a person to copy files out of a harness that will not be here.
 
-- **Decide whether the replay wants distinct replies or a frequency-weighted
-  sample.** 1,852 of the 3,789 committed records repeat an earlier record
-  exactly: the same form, fixture, line, reply and outcome. Several models
-  answer a simple rename identically, and the same case appears in more than one
-  run.
-
-  Which is correct depends on what iteration 5 asks. A test requiring agreement
-  on every record gains nothing from a duplicate and pays for it in runtime. A
-  report of how often the applier agrees is frequency-weighted with them and
-  coverage-weighted without, and those are different numbers. Deduplicating on
-  that key would more than halve the file, so it is worth settling before the
-  report is written rather than after.
-
 - **Rename the journals when that happens.** `edit-candidates`,
   `edit-conclusive` and `edit-sub-v2` say where a run sat in a sequence of
   attempts rather than what it measured, and `conclusive` was a hope rather than

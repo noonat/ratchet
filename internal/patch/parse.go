@@ -14,6 +14,8 @@ var (
 	rePut = regexp.MustCompile(`^PUT\s+(\d+)\s*\.=\s*(\d+)\s*:$`)
 	// reSub matches `SUB N:`, the fragment form.
 	reSub = regexp.MustCompile(`^SUB\s+(\d+)\s*:$`)
+	// reFence matches a Markdown code fence, with or without a language tag.
+	reFence = regexp.MustCompile("^`{3,}[a-zA-Z0-9_-]*$")
 )
 
 // Parse reads a reply and returns the patch it describes.
@@ -36,6 +38,9 @@ func Parse(reply string) (*Patch, error) {
 	// sigil went missing, which would silently shorten the replacement, while a
 	// header or the end of the reply means it was only trailing space.
 	blankAt := 0
+	// fenceAt remembers a code fence seen inside an open hunk, for the same reason
+	// as blankAt: whether it matters depends on whether a body row follows it.
+	fenceAt := 0
 
 	// close finishes the hunk being read, refusing one that never got both rows.
 	// A hunk with only a `-` row states what to replace and not what to replace it
@@ -69,7 +74,7 @@ func Parse(reply string) (*Patch, error) {
 			}
 		}
 		p.Hunks = append(p.Hunks, *cur)
-		cur, blankAt = nil, 0
+		cur, blankAt, fenceAt = nil, 0, 0
 		return nil
 	}
 
@@ -82,6 +87,26 @@ func Parse(reply string) (*Patch, error) {
 			// expressible: `+` on its own is a sigil with empty content.
 			if cur != nil && blankAt == 0 {
 				blankAt = n
+			}
+			continue
+		}
+
+		// A code fence around a reply is a wrapper, never content, and is skipped.
+		// Measured over 3,789 recorded replies, 221 arrive fenced, and the harness that
+		// scored them matched its patterns anywhere in the text, so every published
+		// success rate for these forms already assumes the fence is ignored. Refusing
+		// it would make this applier worse than the numbers that chose the format, on
+		// 81 replies that were scored correct.
+		//
+		// Inside an open hunk it is remembered rather than skipped, for the same reason
+		// as a blank line: dropping it would silently shorten the replacement. A model
+		// replacing a Markdown line with a fenced block writes `+` rows whose content
+		// is backticks, and a bare fence between two of those rows would otherwise
+		// vanish and leave the file with an unterminated fence. None of the 221 fenced
+		// replies has a body row after a fence, so remembering it costs nothing.
+		if reFence.MatchString(strings.TrimSpace(line)) {
+			if cur != nil && fenceAt == 0 {
+				fenceAt = n
 			}
 			continue
 		}
@@ -135,6 +160,9 @@ func Parse(reply string) (*Patch, error) {
 		if blankAt != 0 {
 			return nil, faultAt(blankAt, "a blank line between body rows: an empty line is written as `+` alone")
 		}
+		if fenceAt != 0 {
+			return nil, faultAt(fenceAt, "a code fence between body rows: a line of backticks in the replacement is written as `+` and then the backticks")
+		}
 		switch line[0] {
 		case '-':
 			if len(cur.New) > 0 {
@@ -144,7 +172,7 @@ func Parse(reply string) (*Patch, error) {
 		case '+':
 			cur.New = append(cur.New, line[1:])
 		default:
-			return nil, faultAt(n, "a body row starts with `-` or `+`")
+			return nil, faultAt(n, "a body row must start with `-` or `+`")
 		}
 	}
 
