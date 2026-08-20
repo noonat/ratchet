@@ -38,8 +38,8 @@ worth finding.
 
 ## Out of scope
 
-The architecture describes five stages: resolve, apply, normalise, validate,
-diff-filter. This spec builds the first three. The rest are named here so nobody
+The architecture describes the pipeline as resolve, apply, validate,
+diff-filter. This spec builds the first two. The rest are named here so nobody
 goes looking for them.
 
 - No validate stage. Running the language's own checker on the result, and

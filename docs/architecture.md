@@ -949,20 +949,32 @@ what the anchor exists to prevent.
 
 ### The edit pipeline
 
-Five stages, and nothing is written until the last.
+Four stages, and nothing is written until the last.
 
 ```
-  resolve anchor ─► apply in memory ─► normalise ─► validate ─► diff-filter ─► write
-       │                                                │
-       └── E_ANCHOR_MISMATCH                             └── E_EDIT_REJECTED (not applied)
+  resolve anchor ─► apply in memory ─► validate ─► diff-filter ─► write
+       │                                     │
+       └── E_ANCHOR_MISMATCH                  └── E_EDIT_REJECTED (not applied)
 ```
 
-Normalise maps the damage a quantised model does when retyping code: seven dash
-variants, eight quote variants, thirteen space variants, to ASCII. That is a
-transcription artifact, not an intention. Similarity matching is not in this
-pipeline and will not be: aider has an edit-distance matcher at threshold 0.8
-and disabled it with a bare `return`, and an edit applied to code that merely
-resembles the target is a corruption that survives review.
+Nothing rewrites what the model wrote. An earlier version of this document put a
+normalize stage between apply and validate, converting seven dash variants,
+eight quote variants and thirteen space variants to ASCII on the grounds that
+this is the damage a quantized model does when retyping code. Measured against
+19,055 recorded replies, it is not: no model introduced one. Every reply
+containing such a character had copied it out of a file that already held it,
+and 289 of those scored correct, so the stage would have converted 289 right
+answers into wrong ones and each would have looked right in review.
+
+The damage that was measured is indentation. glm reproduced a line correctly and
+mangled its leading whitespace 22 times in 30, and 30 replies in 119 across four
+models did the same. The repair for that is re-indentation from the line being
+replaced, which uses what the tool already knows rather than guessing.
+
+Similarity matching is not in this pipeline and will not be: aider has an
+edit-distance matcher at threshold 0.8 and disabled it with a bare `return`, and
+an edit applied to code that merely resembles the target is a corruption that
+survives review.
 
 Validate runs the language's own checker on the result: `node --check` at
 minimum, the attached language server when there is one, which upgrades the
