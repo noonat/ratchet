@@ -55,4 +55,5 @@ check: build lint test ## build, lint, test — what a gate runs
 
 .PHONY: fixtures
 fixtures: ## rebuild testdata/fixtures.jsonl from journals/ (FORCE=1 to accept a change)
-	go run ./cmd/distill
+	go run ./cmd/ratchet-dev fixtures $(if $(FORCE),--force,)
+

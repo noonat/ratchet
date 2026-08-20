@@ -32,9 +32,8 @@ import (
 // the FileSet they were parsed in so a check can name the line it rejects. Walking
 // the tree means a convention covers code added later without anyone remembering to
 // list it.
-func goFiles(t *testing.T) (*token.FileSet, map[string]*ast.File) {
-	t.Helper()
-	g := NewWithT(t)
+func goFiles(g *WithT) (*token.FileSet, map[string]*ast.File) {
+	g.THelper()
 	root, err := filepath.Abs("../..")
 	g.Expect(err).NotTo(HaveOccurred())
 
@@ -74,7 +73,8 @@ func goFiles(t *testing.T) (*token.FileSet, map[string]*ast.File) {
 // the rest of the table. Creating it inside the closure fixes all three, and
 // costs one line.
 func TestTableTestsUseSubtests(t *testing.T) {
-	fset, files := goFiles(t)
+	g := NewWithT(t)
+	fset, files := goFiles(g)
 	for name, file := range files {
 		if !strings.HasSuffix(name, "_test.go") {
 			continue
@@ -230,7 +230,8 @@ func subtestClosure(block *ast.BlockStmt) *ast.FuncLit {
 // carries a doc comment that starts with its name. A visual pass over the harness
 // that preceded this repo missed twenty of them.
 func TestExportedIdentifiersAreDocumented(t *testing.T) {
-	_, files := goFiles(t)
+	g := NewWithT(t)
+	_, files := goFiles(g)
 	for name, file := range files {
 		if strings.HasSuffix(name, "_test.go") {
 			continue
@@ -291,7 +292,8 @@ func undocumentedExports(file *ast.File) []string {
 // literals are exempt: a tiny transform passed as an argument is the one place the
 // compact form is clearer.
 func TestFunctionBodiesAreMultiLine(t *testing.T) {
-	fset, files := goFiles(t)
+	g := NewWithT(t)
+	fset, files := goFiles(g)
 	for name, file := range files {
 		t.Run(name, func(t *testing.T) {
 			g := NewWithT(t)
@@ -331,7 +333,8 @@ func oneLineFuncs(fset *token.FileSet, file *ast.File) []string {
 // The two checks run in separate subtests. Together in one, the first to fail hides
 // the second, which is how the positional-field check went unproven once already.
 func TestTablesAreNamedNotInlined(t *testing.T) {
-	_, files := goFiles(t)
+	g := NewWithT(t)
+	_, files := goFiles(g)
 	for name, file := range files {
 		t.Run(name+"/inlined table", func(t *testing.T) {
 			g := NewWithT(t)
@@ -475,7 +478,8 @@ func TestEveryPackageIsInTheArchitecture(t *testing.T) {
 // so the reader has to find where the list starts. That shape was written down as
 // wrong twice and produced three times after.
 func TestArgumentListsWrapAllOrNothing(t *testing.T) {
-	fset, files := goFiles(t)
+	g := NewWithT(t)
+	fset, files := goFiles(g)
 	for name, file := range files {
 		t.Run(name, func(t *testing.T) {
 			g := NewWithT(t)
@@ -513,6 +517,52 @@ func halfWrappedCalls(fset *token.FileSet, file *ast.File) []string {
 		default:
 			out = append(out, fmt.Sprintf("%s: argument list is partly wrapped", fset.Position(call.Lparen)))
 		}
+		return true
+	})
+	return out
+}
+
+// TestGomegaIsBoundBeforeItIsUsed enforces that an assertion goes through a named
+// gomega rather than one made on the spot.
+//
+// `NewWithT(t).Expect(x)` reads as one thing and is two, and the next assertion in
+// that block has to either repeat the construction or refactor the line. Binding it
+// first costs one line and the second assertion costs none.
+//
+// The subtest check above does not catch this: an inline construction is a call
+// inside the closure, so it satisfies that rule while breaking this one.
+func TestGomegaIsBoundBeforeItIsUsed(t *testing.T) {
+	g := NewWithT(t)
+	fset, files := goFiles(g)
+	for name, file := range files {
+		if !strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(inlineGomega(fset, file)).
+				To(BeEmpty(), "assign the gomega instance first, then assert through it")
+		})
+	}
+}
+
+// inlineGomega reports assertions made on a gomega constructed in the same
+// expression.
+func inlineGomega(fset *token.FileSet, file *ast.File) []string {
+	var out []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		sel, ok := n.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		inner, ok := sel.X.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		if name, _ := inner.Fun.(*ast.Ident); name == nil || name.Name != "NewWithT" {
+			return true
+		}
+		out = append(out, fmt.Sprintf("%s: %s on a gomega made in the same expression", fset.Position(sel.Pos()), sel.Sel.Name))
 		return true
 	})
 	return out

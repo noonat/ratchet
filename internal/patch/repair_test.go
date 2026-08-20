@@ -173,7 +173,8 @@ func TestIndentSensitiveErrsTowardRefusing(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.lang, func(t *testing.T) {
-			NewWithT(t).Expect(IndentSensitive(c.lang)).To(Equal(c.want))
+			g := NewWithT(t)
+			g.Expect(IndentSensitive(c.lang)).To(Equal(c.want))
 		})
 	}
 }

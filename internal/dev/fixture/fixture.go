@@ -162,6 +162,14 @@ func Extract(journal string, r io.Reader) ([]Record, error) {
 		if row.Case.Original == "" || row.Reply == "" {
 			continue
 		}
+		// One line, or the replay cannot place it. A record whose original spans lines
+		// would shift every line number in the file built around it, so the addressed
+		// hunk would compare against filler and correct replies would read as wrong.
+		// That is a silent shift in every agreement number rather than an error, and no
+		// journal has produced one yet, which is why it is refused here before one can.
+		if strings.ContainsAny(row.Case.Original, "\r\n") {
+			continue
+		}
 		out = append(out, Record{
 			Journal:  journal,
 			Form:     row.Variant,

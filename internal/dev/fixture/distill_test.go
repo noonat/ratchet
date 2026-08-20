@@ -11,13 +11,13 @@ import (
 
 // build runs a rebuild into a temporary tree and saves the result, so a test can
 // then run a second rebuild against what the first one wrote.
-func build(t *testing.T, dir, path string, force bool) (*Set, error) {
-	t.Helper()
+func build(g *WithT, dir, path string, force bool) (*Set, error) {
+	g.THelper()
 	set, err := Rebuild(dir, path, force)
 	if err != nil {
 		return nil, err
 	}
-	NewWithT(t).Expect(Save(path, set)).To(Succeed())
+	g.Expect(Save(path, set)).To(Succeed())
 	return set, nil
 }
 
@@ -31,11 +31,11 @@ func TestAnEmptyJournalDirectoryChangesNothing(t *testing.T) {
 	g.Expect(os.Mkdir(journals, 0o750)).To(Succeed())
 	path := filepath.Join(dir, "fixtures.jsonl")
 
-	journal(t, journals, "a.jsonl", []string{
-		row(t, "sub_diff", "game", 1, "a", "b", "r1", "correct"),
-		row(t, "sub_diff", "game", 2, "c", "d", "r2", "correct"),
+	journal(g, journals, "a.jsonl", []string{
+		row(g, "sub_diff", "game", 1, "a", "b", "r1", "correct"),
+		row(g, "sub_diff", "game", 2, "c", "d", "r2", "correct"),
 	})
-	built, err := build(t, journals, path, false)
+	built, err := build(g, journals, path, false)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(built.Records).To(HaveLen(2))
 	before, err := os.ReadFile(path)
@@ -43,7 +43,7 @@ func TestAnEmptyJournalDirectoryChangesNothing(t *testing.T) {
 
 	// The fresh clone: the fixtures are committed, the journals are not.
 	g.Expect(os.Remove(filepath.Join(journals, "a.jsonl"))).To(Succeed())
-	rebuilt, err := build(t, journals, path, false)
+	rebuilt, err := build(g, journals, path, false)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(rebuilt.Records).To(HaveLen(2), "records whose journal is absent are kept")
 
@@ -61,15 +61,15 @@ func TestRebuildingTwiceProducesTheSameBytes(t *testing.T) {
 	g.Expect(os.Mkdir(journals, 0o750)).To(Succeed())
 	path := filepath.Join(dir, "fixtures.jsonl")
 
-	journal(t, journals, "b.jsonl", []string{row(t, "sub_diff", "game", 5, "e", "f", "r3", "correct")})
-	journal(t, journals, "a.jsonl", []string{row(t, "put_diff_checked", "textwrap", 1, "a", "b", "r1", "refused")})
+	journal(g, journals, "b.jsonl", []string{row(g, "sub_diff", "game", 5, "e", "f", "r3", "correct")})
+	journal(g, journals, "a.jsonl", []string{row(g, "put_diff_checked", "textwrap", 1, "a", "b", "r1", "refused")})
 
-	_, err := build(t, journals, path, false)
+	_, err := build(g, journals, path, false)
 	g.Expect(err).NotTo(HaveOccurred())
 	pass1, err := os.ReadFile(path)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	_, err = build(t, journals, path, false)
+	_, err = build(g, journals, path, false)
 	g.Expect(err).NotTo(HaveOccurred())
 	pass2, err := os.ReadFile(path)
 	g.Expect(err).NotTo(HaveOccurred())
@@ -87,18 +87,18 @@ func TestRebuildRefusesARescoredJournal(t *testing.T) {
 	g.Expect(os.Mkdir(journals, 0o750)).To(Succeed())
 	path := filepath.Join(dir, "fixtures.jsonl")
 
-	journal(t, journals, "a.jsonl", []string{
-		row(t, "sub_diff", "game", 1, "a", "b", "r1", "correct"),
-		row(t, "sub_diff", "game", 2, "c", "d", "r2", "correct"),
+	journal(g, journals, "a.jsonl", []string{
+		row(g, "sub_diff", "game", 1, "a", "b", "r1", "correct"),
+		row(g, "sub_diff", "game", 2, "c", "d", "r2", "correct"),
 	})
-	_, err := build(t, journals, path, false)
+	_, err := build(g, journals, path, false)
 	g.Expect(err).NotTo(HaveOccurred())
 	before, err := os.ReadFile(path)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	journal(t, journals, "a.jsonl", []string{
-		row(t, "sub_diff", "game", 1, "a", "b", "r1", "applied_wrong"),
-		row(t, "sub_diff", "game", 2, "c", "d", "r2", "correct"),
+	journal(g, journals, "a.jsonl", []string{
+		row(g, "sub_diff", "game", 1, "a", "b", "r1", "applied_wrong"),
+		row(g, "sub_diff", "game", 2, "c", "d", "r2", "correct"),
 	})
 
 	_, err = Rebuild(journals, path, false)
@@ -127,11 +127,11 @@ func TestRebuildRefusesToKeepLessThanItDid(t *testing.T) {
 	g.Expect(os.Mkdir(journals, 0o750)).To(Succeed())
 	path := filepath.Join(dir, "fixtures.jsonl")
 
-	journal(t, journals, "a.jsonl", []string{
-		row(t, "sub_diff", "game", 1, "a", "b", "r1", "correct"),
-		row(t, "put_diff_checked", "game", 2, "c", "d", "r2", "correct"),
+	journal(g, journals, "a.jsonl", []string{
+		row(g, "sub_diff", "game", 1, "a", "b", "r1", "correct"),
+		row(g, "put_diff_checked", "game", 2, "c", "d", "r2", "correct"),
 	})
-	_, err := build(t, journals, path, false)
+	_, err := build(g, journals, path, false)
 	g.Expect(err).NotTo(HaveOccurred())
 	before, err := os.ReadFile(path)
 	g.Expect(err).NotTo(HaveOccurred())
@@ -161,12 +161,12 @@ func TestANewJournalIsAdded(t *testing.T) {
 	g.Expect(os.Mkdir(journals, 0o750)).To(Succeed())
 	path := filepath.Join(dir, "fixtures.jsonl")
 
-	journal(t, journals, "a.jsonl", []string{row(t, "sub_diff", "game", 1, "a", "b", "r1", "correct")})
-	_, err := build(t, journals, path, false)
+	journal(g, journals, "a.jsonl", []string{row(g, "sub_diff", "game", 1, "a", "b", "r1", "correct")})
+	_, err := build(g, journals, path, false)
 	g.Expect(err).NotTo(HaveOccurred())
 
-	journal(t, journals, "b.jsonl", []string{row(t, "put_diff_checked", "bullets", 7, "g", "h", "r2", "refused")})
-	set, err := build(t, journals, path, false)
+	journal(g, journals, "b.jsonl", []string{row(g, "put_diff_checked", "bullets", 7, "g", "h", "r2", "refused")})
+	set, err := build(g, journals, path, false)
 
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(set.Records).To(HaveLen(2))
@@ -185,8 +185,8 @@ func TestRebuildRefusesASupersededJournal(t *testing.T) {
 	path := filepath.Join(dir, "fixtures.jsonl")
 
 	for name := range Superseded {
-		journal(t, journals, name, []string{
-			row(t, "sub_diff", "game", 1, "a", "b", "r1", "correct"),
+		journal(g, journals, name, []string{
+			row(g, "sub_diff", "game", 1, "a", "b", "r1", "correct"),
 		})
 	}
 
@@ -209,21 +209,21 @@ func TestRebuildRefusesAJournalThatKeepsLessOnItsOwn(t *testing.T) {
 	g.Expect(os.Mkdir(journals, 0o750)).To(Succeed())
 	path := filepath.Join(dir, "fixtures.jsonl")
 
-	journal(t, journals, "a.jsonl", []string{
-		row(t, "sub_diff", "game", 1, "a", "b", "r1", "correct"),
-		row(t, "put_diff_checked", "game", 2, "c", "d", "r2", "correct"),
+	journal(g, journals, "a.jsonl", []string{
+		row(g, "sub_diff", "game", 1, "a", "b", "r1", "correct"),
+		row(g, "put_diff_checked", "game", 2, "c", "d", "r2", "correct"),
 	})
-	_, err := build(t, journals, path, false)
+	_, err := build(g, journals, path, false)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	// a.jsonl now yields one record instead of two, and b.jsonl more than covers it
 	restore := Forms
 	Forms = map[string]struct{}{"sub_diff": {}}
 	defer func() { Forms = restore }()
-	journal(t, journals, "b.jsonl", []string{
-		row(t, "sub_diff", "bullets", 7, "g", "h", "r3", "refused"),
-		row(t, "sub_diff", "bullets", 8, "i", "j", "r4", "refused"),
-		row(t, "sub_diff", "bullets", 9, "k", "l", "r5", "refused"),
+	journal(g, journals, "b.jsonl", []string{
+		row(g, "sub_diff", "bullets", 7, "g", "h", "r3", "refused"),
+		row(g, "sub_diff", "bullets", 8, "i", "j", "r4", "refused"),
+		row(g, "sub_diff", "bullets", 9, "k", "l", "r5", "refused"),
 	})
 
 	set, err := Rebuild(journals, path, false)
@@ -246,7 +246,7 @@ func TestARefusalIsTypedSoItPrintsAsAMessage(t *testing.T) {
 	g.Expect(os.Mkdir(journals, 0o750)).To(Succeed())
 
 	for name := range Superseded {
-		journal(t, journals, name, []string{row(t, "sub_diff", "game", 1, "a", "b", "r", "correct")})
+		journal(g, journals, name, []string{row(g, "sub_diff", "game", 1, "a", "b", "r", "correct")})
 	}
 
 	_, err := Rebuild(journals, filepath.Join(dir, "fixtures.jsonl"), false)

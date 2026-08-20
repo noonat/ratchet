@@ -77,6 +77,22 @@ so the next person adds a statement and reformats the whole thing, and the diff
 hides what changed. Function literals are exempt: a small transform passed as an
 argument is the one place the compact form is clearer.
 
+**Judgment.** `main` calls one function and reports what it returns:
+
+```go
+func main() {
+    if err := run(); err != nil {
+        fmt.Fprintf(os.Stderr, "ratchet: %+v\n", err)
+        os.Exit(1)
+    }
+}
+```
+
+`os.Exit` from wherever a call happened to fail skips every deferred close, so a
+temporary file survives and a half-written output stays where a whole one was
+expected. It also scatters the decision about what a failure looks like across a
+dozen sites, where one of them will drift.
+
 **Judgment.** A doc comment sits on the thing it describes. `xxHash32`'s comment
 was attached to the const block above it, where a reader looking at the function
 never sees it.
@@ -268,6 +284,29 @@ for _, c := range cases {
 Binding gomega to the parent `t` attributes the failure to the function instead
 of the row, hides the row's name, and stops the table at the first failure. The
 closure fixes all three for one line.
+
+**Judgment.** A test helper that asserts takes the gomega, not the `*testing.T`:
+
+```go
+func journal(g *WithT, dir, name string, rows []string) string {
+    g.THelper()
+    ...
+}
+```
+
+Taking `t` and constructing a gomega inside means every helper makes its own,
+and the caller already has one. `THelper` is a field on `WithT` holding
+`t.Helper`, so frame skipping still works. A helper that asserts nothing needs
+neither and should take neither.
+
+**Enforced by `internal/convention`.** An assertion goes through a named gomega,
+not one made in the same expression. `NewWithT(t).Expect(x)` reads as one thing
+and is two, and the next assertion in that block has to either repeat the
+construction or rewrite the line. Binding it first costs a line once and nothing
+after that.
+
+The subtest rule above does not cover this: an inline construction is a call
+inside the closure, so it satisfies that rule while breaking this one.
 
 **Enforced by `internal/convention`.** A table is a named variable, not a
 literal inside the `range`, and its rows name their fields, one per line:

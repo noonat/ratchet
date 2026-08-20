@@ -32,17 +32,17 @@ type journalRow struct {
 }
 
 // journal writes a journal file holding the given rows, and returns its path.
-func journal(t *testing.T, dir, name string, rows []string) string {
-	t.Helper()
+func journal(g *WithT, dir, name string, rows []string) string {
+	g.THelper()
 	path := filepath.Join(dir, name)
-	NewWithT(t).Expect(os.WriteFile(path, []byte(strings.Join(rows, "\n")+"\n"), 0o600)).To(Succeed())
+	g.Expect(os.WriteFile(path, []byte(strings.Join(rows, "\n")+"\n"), 0o600)).To(Succeed())
 	return path
 }
 
 // row is one journal line from the `edit` probe, holding the fields the distiller
 // reads.
-func row(t *testing.T, form, fixture string, line int, original, want, reply, outcome string) string {
-	t.Helper()
+func row(g *WithT, form, fixture string, line int, original, want, reply, outcome string) string {
+	g.THelper()
 	var r journalRow
 	r.Probe = "edit"
 	r.Variant = form
@@ -52,14 +52,14 @@ func row(t *testing.T, form, fixture string, line int, original, want, reply, ou
 	r.Case.Want = want
 	r.Reply = reply
 	r.Verdict.Outcome = outcome
-	return marshal(t, r)
+	return marshal(g, r)
 }
 
 // marshal renders a row, for a case that has to set a field row does not expose.
-func marshal(t *testing.T, r journalRow) string {
-	t.Helper()
+func marshal(g *WithT, r journalRow) string {
+	g.THelper()
 	out, err := json.Marshal(r)
-	NewWithT(t).Expect(err).NotTo(HaveOccurred())
+	g.Expect(err).NotTo(HaveOccurred())
 	return string(out)
 }
 
@@ -68,6 +68,7 @@ func marshal(t *testing.T, r journalRow) string {
 const patch = "[fixtures/game.js#3449]\nPUT 141.=141:\n-      if (Math.random() < 0.5) {\n+      if (Math.randomRenamed() < 0.5) {"
 
 func TestExtractKeepsOnlyWhatCanBeReplayed(t *testing.T) {
+	g := NewWithT(t)
 	cases := []struct {
 		name string
 		line string
@@ -75,32 +76,32 @@ func TestExtractKeepsOnlyWhatCanBeReplayed(t *testing.T) {
 	}{
 		{
 			name: "a form this repo parses",
-			line: row(t, "put_diff_checked", "game", 12, "a", "b", "reply", "correct"),
+			line: row(g, "put_diff_checked", "game", 12, "a", "b", "reply", "correct"),
 			kept: true,
 		},
 		{
 			name: "the other form this repo parses",
-			line: row(t, "sub_diff", "game", 12, "a", "b", "reply", "correct"),
+			line: row(g, "sub_diff", "game", 12, "a", "b", "reply", "correct"),
 			kept: true,
 		},
 		{
 			name: "a form this repo does not parse",
-			line: row(t, "sub_arrow", "game", 12, "a", "b", "reply", "correct"),
+			line: row(g, "sub_arrow", "game", 12, "a", "b", "reply", "correct"),
 			kept: false,
 		},
 		{
 			name: "a different probe, whose records are a different shape",
-			line: marshal(t, otherProbe(t)),
+			line: marshal(g, otherProbe()),
 			kept: false,
 		},
 		{
 			name: "a reply as a model actually sends one, over several lines",
-			line: row(t, "put_diff_checked", "game", 141, "      if (Math.random() < 0.5) {", "x", patch, "correct"),
+			line: row(g, "put_diff_checked", "game", 141, "      if (Math.random() < 0.5) {", "x", patch, "correct"),
 			kept: true,
 		},
 		{
 			name: "a reply that never arrived",
-			line: row(t, "sub_diff", "game", 12, "a", "b", "", "failed"),
+			line: row(g, "sub_diff", "game", 12, "a", "b", "", "failed"),
 			kept: false,
 		},
 		{
@@ -126,8 +127,8 @@ func TestExtractKeepsOnlyWhatCanBeReplayed(t *testing.T) {
 // record is not a reason to refuse the tens of thousands ahead of it.
 func TestATornLineDoesNotLoseTheOnesBeforeIt(t *testing.T) {
 	g := NewWithT(t)
-	body := row(t, "sub_diff", "game", 1, "a", "b", "r1", "correct") + "\n" +
-		row(t, "sub_diff", "game", 2, "c", "d", "r2", "correct") + "\n" +
+	body := row(g, "sub_diff", "game", 1, "a", "b", "r1", "correct") + "\n" +
+		row(g, "sub_diff", "game", 2, "c", "d", "r2", "correct") + "\n" +
 		`{"probe":"edit","variant":"sub_diff","cas`
 
 	got, err := Extract("j.jsonl", strings.NewReader(body))
@@ -207,8 +208,7 @@ func TestReadTreatsAnEmptyFileAsAnEmptySet(t *testing.T) {
 }
 
 // otherProbe is a row from a probe whose records are a different shape.
-func otherProbe(t *testing.T) journalRow {
-	t.Helper()
+func otherProbe() journalRow {
 	var r journalRow
 	r.Probe = "multihunk"
 	r.Variant = "put_diff_checked"

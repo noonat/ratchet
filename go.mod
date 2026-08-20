@@ -5,6 +5,7 @@ go 1.26
 require (
 	github.com/cockroachdb/errors v1.14.0
 	github.com/onsi/gomega v1.42.1
+	github.com/urfave/cli/v3 v3.11.0
 )
 
 require (

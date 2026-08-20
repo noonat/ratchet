@@ -35,8 +35,9 @@ func TestNothingHereCanReachAFile(t *testing.T) {
 		`"ratchet/internal/patch"`:        {},
 	}
 
+	g := NewWithT(t)
 	entries, err := os.ReadDir(".")
-	NewWithT(t).Expect(err).NotTo(HaveOccurred())
+	g.Expect(err).NotTo(HaveOccurred())
 
 	examined := 0
 	for _, e := range entries {
@@ -63,5 +64,5 @@ func TestNothingHereCanReachAFile(t *testing.T) {
 
 	// Nothing examined is a green run that checked nothing, which is what a package
 	// emptied or renamed would produce.
-	NewWithT(t).Expect(examined).NotTo(BeZero(), "found no source files to check")
+	g.Expect(examined).NotTo(BeZero(), "found no source files to check")
 }

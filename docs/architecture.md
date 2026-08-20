@@ -97,15 +97,18 @@ no asset build.
 
 ### Packages
 
-Everything is `internal/`, and there is no root package: `main.go` imports the
-front ends directly.
+Everything is `internal/`. The binaries are under `cmd/` and import the front
+ends directly.
 
 ```
+cmd/ratchet               the binary a user installs; the urfave/cli v3 tree
+cmd/ratchet-dev           tooling for this repo: fixtures, replay
 internal/agent            the loop: providers, streaming, dispatch, classification
 internal/anchor           hash-anchored line addressing
 internal/api              the wire schema: --json result types and their mappers
 internal/cli              the Run* actions, one file per command noun
 internal/convention       tests that hold this repo to its own conventions
+internal/dev/fixture      distill harness journals into replay fixtures
 internal/drafter          the drafter seat: the five passes, its prompt, revision
 internal/drafter/claude   the subscription path: drives the claude CLI
 internal/drafter/session  the collaboration surface: HTTP, SSE, threads, mockups
@@ -114,7 +117,6 @@ internal/drafter/tool     read, grep, index, bash, write, edit, ask, choose,
 internal/edit             resolve an anchor, apply a patch in memory
 internal/executor         the executor seat: its prompt, its budgets
 internal/executor/tool    read, edit, write, bash, revert_file, done, blocked
-internal/fixture          distill harness journals into replay fixtures
 internal/gate             gate execution, the mutation sweep, worktrees
 internal/index            the repo index and its language providers
 internal/journal          append-only event log; also the replay source
@@ -124,7 +126,6 @@ internal/sandbox          engines, container lifecycle, exec, egress rules
 internal/spec             parse and render specs: the ratchet blocks, the state
                           block, the fold that produces status
 internal/testutil         shared fixtures, stdlib-only so any test can import it
-main.go                   the only package main; the urfave/cli v3 command tree
 ```
 
 **Nothing is public until something needs it.** A package outside `internal/` is
@@ -149,16 +150,17 @@ layer that happens to serve drafting. Its central type is `session.Session`,
 which is what `ratchet plan` opens.
 
 ```
-main.go → cli → {drafter, executor, gate, index, journal, notify} → {spec, anchor}
-       drafter  → {agent, drafter/claude, drafter/session, drafter/tool}
-       executor → {agent, executor/tool, sandbox}
-       executor/tool → edit → {anchor, patch}
-       cli → api → {spec, journal}
+cmd/ratchet → cli → {drafter, executor, gate, index, journal, notify} → {spec, anchor}
+    cli           → api → {spec, journal}
+    drafter       → {agent, drafter/claude, drafter/session, drafter/tool}
+    executor      → {agent, executor/tool, sandbox}
+    executor/tool → edit → {anchor, patch}
 ```
 
-`drafter` and `executor` are independent siblings. `spec` has no dependency on
-`agent`, because parsing a spec must be possible without the ability to run one:
-`ratchet list` and `ratchet verify` run where no model exists.
+An indented line expands a name from the line above it. `drafter` and `executor`
+are independent siblings. `spec` has no dependency on `agent`, because parsing a
+spec must be possible without the ability to run one: `ratchet list` and
+`ratchet verify` run where no model exists.
 
 `internal/api` holds the `--json` shapes and sits below `cli`, so the CLI and
 the server emit one contract by construction rather than by discipline. The wire

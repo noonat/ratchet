@@ -2,11 +2,53 @@ package fixture
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/cockroachdb/errors"
 )
+
+const (
+	// JournalDir is where the harness journals are copied, relative to the repository
+	// root. Gitignored, so on a fresh clone it is empty.
+	JournalDir = "journals"
+	// Path is the committed fixtures file, relative to the repository root.
+	Path = "testdata/fixtures.jsonl"
+)
+
+// Refresh rebuilds the committed fixtures and reports what went into them.
+//
+// The paths are fixed rather than arguments. They name files that belong to this
+// repository, not to whatever directory the command was started from, and making them
+// configurable would invite a rebuild that wrote somewhere else.
+func Refresh(force bool, w io.Writer) error {
+	set, err := Rebuild(JournalDir, Path, force)
+	if err != nil {
+		return err
+	}
+	if err := Save(Path, set); err != nil {
+		return err
+	}
+	for _, s := range set.Sources {
+		_, err := fmt.Fprintf(w, "  %-28s %6d records  %.12s\n", s.Journal, s.Records, s.SHA256)
+		if err != nil {
+			return errors.Wrap(err, "reporting the sources")
+		}
+	}
+	_, err = fmt.Fprintf(w, "  %d records from %d journals\n", len(set.Records), len(set.Sources))
+	return errors.Wrap(err, "reporting the totals")
+}
+
+// Load reads the committed fixtures.
+func Load() (*Set, error) {
+	f, err := os.Open(Path)
+	if err != nil {
+		return nil, errors.Wrapf(err, "opening %s: run this from the repository root", Path)
+	}
+	defer f.Close()
+	return Read(f)
+}
 
 // Rebuild regenerates the fixtures at path from the journals in dir.
 //
