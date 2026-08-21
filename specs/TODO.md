@@ -18,26 +18,20 @@ evidence behind it. Early on those are opposites, because evidence collects
 around what is already built, so ranking by evidence ranks the least risky work
 first. Specs already written are worked lowest number first, per the index.
 
-1. **A session that outlives one command: a read that records, and a write to
-   disk.** The applier is a library nothing calls. `Reads` is built in two
-   non-test places and both fill it with the file about to be edited, so the
-   provenance rule — the most measured decision in the applier — cannot fail in
-   any real path. It earns its keep when a read is three turns old.
-
-   The write question comes with it: atomic per file or per patch, and what
-   happens when a patch's second hunk fails validation after the first was
-   applied.
-
-2. **The agent loop, against a model host.** The first end-to-end path, and the
+1. **The agent loop, against a model host.** The first end-to-end path, and the
    thing every downstream design decision is currently guessing about. The
    refusal economics the whole design rests on have been measured in a research
    harness and never in a loop this repo owns.
 
-3. **`ratchet qualify`.** Moves journal production into the repo, which
+   The session under it holds reads across turns and writes whole files, so the
+   provenance rule can now fail in a real path. What has never run is a read
+   that is three turns old.
+
+2. **`ratchet qualify`.** Moves journal production into the repo, which
    dissolves the journal-naming problem below rather than guarding it.
 
-4. **Failure injection**, per the list below. Needs a loop to inject into, so it
-   follows 2.
+3. **Failure injection**, per the list below. Needs a loop to inject into, so it
+   follows 1.
 
 ## Testing
 
@@ -62,17 +56,28 @@ first. Specs already written are worked lowest number first, per the index.
   have held up. A name that lasts says what varied: the models, the forms, the
   fixtures, the output cap.
 
-  Renaming is not free until the rename is a deliberate act. The fixtures header
-  keys on the file name, so a renamed journal reads as a new source while its
-  records under the old name are kept as an absent one, and the committed file
-  silently doubles. Neither existing guard catches it: the hashes are unchanged
-  and the count grows rather than drops. The guard is pulled up in spec **003**,
-  because the detection is one hash comparison the data is already there for.
+  The rename is now a deliberate act rather than a trap. The fixtures header
+  keys on the file name, so a renamed journal used to read as a new source while
+  its records under the old name were kept as an absent one, and the committed
+  file silently doubled: the hashes were unchanged and the count grew rather
+  than dropped, so neither existing guard saw it. The distillation refuses a
+  twin now and says whether to rename one or remove one, which is what makes the
+  renaming above safe to do.
 
 ## Open questions carried over
 
 - Does an anchor need to survive a file being renamed? Today it does not, and a
   rename during an iteration would refuse every subsequent edit to that file.
+- **Atomic per file or per patch is the same question today, and will not stay
+  that way.** A patch names one path, and every check that can refuse runs
+  before any text exists, so a refusal cannot leave a file half-edited and a
+  second hunk failing validation reverts the first for free. A patch spanning
+  two files reopens it: the second file's refusal would have to undo a write
+  already on disk, and the applier has no undo.
+- **A windowed read has to decide what a write leaves visible.** `Read` serves
+  whole files, which is the only reason a snapshot of the edited text is sound.
+  A windowed read recording one would mark every line as displayed and retire
+  the shown-lines check, so an edit to a line nobody saw would resolve.
 
 ## Prose
 
