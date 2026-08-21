@@ -31,6 +31,7 @@ func TestNothingHereCanReachAFile(t *testing.T) {
 		`"context"`:                       {},
 		`"fmt"`:                           {},
 		`"strings"`:                       {},
+		`"unicode"`:                       {},
 		`"github.com/cockroachdb/errors"`: {},
 		`"ratchet/internal/anchor"`:       {},
 		`"ratchet/internal/patch"`:        {},

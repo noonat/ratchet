@@ -1,7 +1,7 @@
 ---
-status: ready
+status: done
 created: 2026-08-20T21:05:00Z
-updated: 2026-08-21T02:31:19.101270325Z
+updated: 2026-08-21T05:39:52.209862565Z
 required_commands:
   - cmd: make check
 ---
@@ -119,49 +119,49 @@ comment names; `unicode` can open no file, and editing the list is that act.
 
 Files: `internal/edit/apply.go` (the two refusal messages, one small helper),
 `internal/edit/write_test.go` (the allowlist entry), one new
-`internal/edit/nearmiss_test.go` (the new tests, tabled per
+`internal/edit/apply_near_miss_test.go` (the new tests, tabled per
 `docs/conventions.md`).
 
-- [ ] Add a helper `whitespaceOnly(a, b string) bool` in `apply.go`: true when
+- [x] Add a helper `whitespaceOnly(a, b string) bool` in `apply.go`: true when
       `a != b` and the two are equal once every `unicode.IsSpace` rune is
       removed. Document what it is for in a comment, per the doc-comment
       convention
-- [ ] In `refuseMismatch`, when the named row — the first row that does not
+- [x] In `refuseMismatch`, when the named row — the first row that does not
       match — is a near-miss, insert ` The difference is whitespace only.`
       before that message's final sentence. When the named row is a content
       mismatch, it does not, even if a later row of the hunk is whitespace apart
-- [ ] In `substitute`, when the fragment is absent on the row, its stripped form
+- [x] In `substitute`, when the fragment is absent on the row, its stripped form
       is not empty, and it occurs exactly once on the whitespace-stripped line,
       add ` Once whitespace is removed, it appears exactly once.`
-- [ ] Add `"unicode"` to the allowlist in `TestNothingHereCanReachAFile`
-- [ ] Table tests in `nearmiss_test.go` for the measured shapes: a PUT row that
-      lost its indent (318 of the 323), and one whose internal spacing differs
-      (5 of them), are refused with the diagnosis
-- [ ] The two definition pins: a row that gained trailing spaces, and one whose
+- [x] Add `"unicode"` to the allowlist in `TestNothingHereCanReachAFile`
+- [x] Table tests in `apply_near_miss_test.go` for the measured shapes: a PUT
+      row that lost its indent (318 of the 323), and one whose internal spacing
+      differs (5 of them), are refused with the diagnosis
+- [x] The two definition pins: a row that gained trailing spaces, and one whose
       single differing space is a non-breaking space (U+00A0). No record differs
       in trailing spaces alone and none holds non-ASCII whitespace, so each pins
       what `unicode.IsSpace` covers rather than a recorded case
-- [ ] The per-row rule, on a two-row PUT hunk: a first row that matches with a
+- [x] The per-row rule, on a two-row PUT hunk: a first row that matches with a
       second differing by an indent is refused with the diagnosis, and the same
       hunk with the content mismatch first is refused without it. The parser
       accepts multi-row ranges (`internal/patch/parse.go`) and the corpus holds
       none, so this pins the rule on a grammatical shape
-- [ ] The SUB cases: a fragment absent byte-exact and occurring exactly once
+- [x] The SUB cases: a fragment absent byte-exact and occurring exactly once
       once whitespace is dropped gets the sentence, and one occurring twice
       exactly gets none
-- [ ] The empty-fragment guard: an all-whitespace fragment gets none, pinned on
+- [x] The empty-fragment guard: an all-whitespace fragment gets none, pinned on
       a line that also strips to empty — the case an unguarded `strings.Count`
       would match
-- [ ] A content mismatch, not whitespace, still refuses and gets neither
+- [x] A content mismatch, not whitespace, still refuses and gets neither
       sentence
-- [ ] Every case above still refuses: assert the outcome is a refusal, not an
+- [x] Every case above still refuses: assert the outcome is a refusal, not an
       application, in each
-- [ ] Run the new tests before changing `apply.go` and see them fail on the
+- [x] Run the new tests before changing `apply.go` and see them fail on the
       message, then pass after
-- [ ] `TestAgainstFixtures` still passes: the replay compares recorded outcomes
+- [x] `TestAgainstFixtures` still passes: the replay compares recorded outcomes
       against replayed ones, and this sentence enters the detail message rather
       than the outcome
-- [ ] `TestEverySettledDecisionCoversWhatItSays` still passes: the settled
+- [x] `TestEverySettledDecisionCoversWhatItSays` still passes: the settled
       decision at `internal/dev/replay/settled.go:87` matches its text as a
       **substring** of the detail (the `Because` field, via `strings.Contains`
       in `Explain`), and the sentence enters before the final one, leaving that
@@ -169,4 +169,13 @@ Files: `internal/edit/apply.go` (the two refusal messages, one small helper),
 
 **Gate:** `make check`
 
+> **Completed** 2026-08-21 05:39 UTC
+>
+> - `make check` — 1.3s
+
 ## Where this plan was departed from
+
+The new tests went into `internal/edit/apply_near_miss_test.go`. The plan named
+`internal/edit/nearmiss_test.go`, which said what the tests were about and not
+what they test; the name that ships pairs with `apply.go`, where the two
+messages and the helper live.

@@ -3,6 +3,7 @@ package edit
 import (
 	"context"
 	"strings"
+	"unicode"
 
 	"ratchet/internal/anchor"
 	"ratchet/internal/patch"
@@ -122,12 +123,20 @@ func refuseMismatch(h patch.Hunk, was []string) error {
 	}
 	for i := range was {
 		if was[i] != h.Old[i] {
+			// The sentence is a claim about the row this message names, so it is
+			// decided on that row alone. A later row of the same hunk differing by
+			// whitespace would not make it true of this one.
+			said := ""
+			if whitespaceOnly(was[i], h.Old[i]) {
+				said = " The difference is whitespace only."
+			}
 			return refuse(
 				ReasonOldMismatch,
-				"Line %d is `%s`, not `%s`. Re-read the file, or send the edit again stating the line as it actually is.",
+				"Line %d is `%s`, not `%s`.%s Re-read the file, or send the edit again stating the line as it actually is.",
 				h.Line+i,
 				was[i],
 				h.Old[i],
+				said,
 			)
 		}
 	}
@@ -142,13 +151,24 @@ func refuseMismatch(h patch.Hunk, was []string) error {
 func substitute(row string, h patch.Hunk, strict bool) (string, error) {
 	if n := strings.Count(row, h.Old[0]); n != 1 {
 		if strict {
+			// Only the absent fragment can be a near-miss. Stripping never lowers an
+			// occurrence count, so one present twice is present twice stripped and can
+			// never strip to one. The empty check is the guard that matters: in Go
+			// strings.Count(s, "") is len(s)+1, so a fragment of pure whitespace would
+			// otherwise count as occurring once on a line that also strips to nothing.
+			said := ""
+			if want := stripSpace(h.Old[0]); n == 0 && want != "" &&
+				strings.Count(stripSpace(row), want) == 1 {
+				said = " Once whitespace is removed, it appears exactly once."
+			}
 			return "", refuse(
 				ReasonOldMismatch,
-				"`%s` appears %d times on line %d, which reads `%s`. A fragment has to appear exactly once.",
+				"`%s` appears %d times on line %d, which reads `%s`. A fragment has to appear exactly once.%s",
 				h.Old[0],
 				n,
 				h.Line,
 				row,
+				said,
 			)
 		}
 		if n == 0 {
@@ -156,6 +176,40 @@ func substitute(row string, h patch.Hunk, strict bool) (string, error) {
 		}
 	}
 	return strings.Replace(row, h.Old[0], h.New[0], 1), nil
+}
+
+// whitespaceOnly reports whether two rows differ by nothing but whitespace.
+//
+// The two are not equal, and become equal once every whitespace rune is dropped from
+// both. That is the difference the model can fix by copying the line rather than
+// retyping it, and saying so is worth a sentence: of the 650 recorded mismatches,
+// 323 are this.
+//
+// unicode.IsSpace rather than an ASCII set, because it is one call and the standard
+// answer. No recorded mismatch turns on a non-ASCII space, so nothing measured rests
+// on the wider definition.
+func whitespaceOnly(a, b string) bool {
+	if a == b {
+		return false
+	}
+	drop := func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}
+	return strings.Map(drop, a) == strings.Map(drop, b)
+}
+
+// stripSpace removes every whitespace rune, so a fragment can be sought on a line
+// without either one's spacing mattering.
+func stripSpace(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}, s)
 }
 
 // sameRows compares what a hunk says it is replacing against what is there.
