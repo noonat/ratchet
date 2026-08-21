@@ -122,7 +122,6 @@ func TestApplyProducesTheEditedFile(t *testing.T) {
 
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(res.Text).To(Equal(c.want))
-			g.Expect(res.Now).To(Equal(c.file), "the file as it stands is always handed back")
 		})
 	}
 }
@@ -214,32 +213,32 @@ func TestNothingIsRewrittenBehindTheModel(t *testing.T) {
 
 func TestApplyRefusesAndSaysWhat(t *testing.T) {
 	cases := []struct {
-		name      string
-		file      string
-		hunk      patch.Hunk
-		want      Reason
-		wantWould string
+		name            string
+		file            string
+		hunk            patch.Hunk
+		want            Reason
+		wantRefusedText string
 	}{
 		{
-			name:      "the line is not what the hunk says it is",
-			file:      "one\ntwo\nthree\n",
-			hunk:      patch.Hunk{Kind: patch.KindPut, Line: 2, End: 2, Old: []string{"TWO"}, New: []string{"2"}},
-			want:      ReasonOldMismatch,
-			wantWould: "one\n2\nthree\n",
+			name:            "the line is not what the hunk says it is",
+			file:            "one\ntwo\nthree\n",
+			hunk:            patch.Hunk{Kind: patch.KindPut, Line: 2, End: 2, Old: []string{"TWO"}, New: []string{"2"}},
+			want:            ReasonOldMismatch,
+			wantRefusedText: "one\n2\nthree\n",
 		},
 		{
-			name:      "the fragment appears twice, so which one is unknowable",
-			file:      "x = x + 1;\n",
-			hunk:      patch.Hunk{Kind: patch.KindSub, Line: 1, End: 1, Old: []string{"x"}, New: []string{"y"}},
-			want:      ReasonOldMismatch,
-			wantWould: "y = x + 1;\n",
+			name:            "the fragment appears twice, so which one is unknowable",
+			file:            "x = x + 1;\n",
+			hunk:            patch.Hunk{Kind: patch.KindSub, Line: 1, End: 1, Old: []string{"x"}, New: []string{"y"}},
+			want:            ReasonOldMismatch,
+			wantRefusedText: "y = x + 1;\n",
 		},
 		{
-			name:      "the fragment is not on the line at all",
-			file:      "const n = 1;\n",
-			hunk:      patch.Hunk{Kind: patch.KindSub, Line: 1, End: 1, Old: []string{"let"}, New: []string{"var"}},
-			want:      ReasonOldMismatch,
-			wantWould: "const n = 1;\n",
+			name:            "the fragment is not on the line at all",
+			file:            "const n = 1;\n",
+			hunk:            patch.Hunk{Kind: patch.KindSub, Line: 1, End: 1, Old: []string{"let"}, New: []string{"var"}},
+			want:            ReasonOldMismatch,
+			wantRefusedText: "const n = 1;\n",
 		},
 		{
 			name: "the file has no such line",
@@ -259,8 +258,8 @@ func TestApplyRefusesAndSaysWhat(t *testing.T) {
 			g.Expect(errors.As(err, &r)).To(BeTrue())
 			g.Expect(r.Reason).To(Equal(c.want))
 			g.Expect(res.Text).To(BeEmpty(), "a refused edit produces no file")
-			g.Expect(res.Now).To(Equal(c.file), "the file as it stands is always handed back")
-			g.Expect(res.Would).To(Equal(c.wantWould), "the model has to see its own attempt, or it re-sends it")
+			g.Expect(r.Text).To(Equal(c.file), "the file as it stands is always handed back")
+			g.Expect(r.RefusedText).To(Equal(c.wantRefusedText), "the model has to see its own attempt, or it re-sends it")
 		})
 	}
 }
@@ -278,6 +277,9 @@ func TestAnchorRefusalShowsNoAttempt(t *testing.T) {
 	res, err := Apply(t.Context(), reads, put("a/b.ts", anchor.Tag("one\ntwo\nthree\n"), 2, "two", "TWO"), moved, Options{})
 
 	g.Expect(err).To(HaveOccurred())
-	g.Expect(res.Would).To(BeEmpty())
-	g.Expect(res.Now).To(Equal(moved))
+	g.Expect(res.Text).To(BeEmpty())
+	var r *Refusal
+	g.Expect(errors.As(err, &r)).To(BeTrue())
+	g.Expect(r.RefusedText).To(BeEmpty())
+	g.Expect(r.Text).To(Equal(moved))
 }

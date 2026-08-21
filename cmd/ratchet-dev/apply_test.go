@@ -140,3 +140,28 @@ func drive(t *testing.T, args []string, in *strings.Reader, out *bytes.Buffer) e
 	}
 	return cmd.Run(t.Context(), args)
 }
+
+// TestApplyWritesWhenAskedTo covers the only path in this command that changes a
+// file. Its sibling asserts the default leaves the file alone, which says nothing
+// about the flag that exists to not leave it alone.
+func TestApplyWritesWhenAskedTo(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "demo.ts")
+	const file = "const n = 1;\n"
+	g.Expect(os.WriteFile(path, []byte(file), 0o600)).To(Succeed())
+
+	reply := "[" + path + "#" + anchor.Tag(file) + "]\nSUB 1:\n-const\n+let\n"
+	var out bytes.Buffer
+	args := []string{"ratchet-dev", "apply", "--file", path, "--write"}
+
+	err := drive(t, args, strings.NewReader(reply), &out)
+
+	g.Expect(err).NotTo(HaveOccurred())
+	on, readErr := os.ReadFile(path)
+	g.Expect(readErr).NotTo(HaveOccurred())
+	g.Expect(string(on)).To(Equal("let n = 1;\n"))
+	info, statErr := os.Stat(path)
+	g.Expect(statErr).NotTo(HaveOccurred())
+	g.Expect(info.Mode().Perm()).To(Equal(os.FileMode(0o600)), "the file keeps its mode")
+}

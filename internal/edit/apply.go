@@ -5,6 +5,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/cockroachdb/errors"
+
 	"ratchet/internal/anchor"
 	"ratchet/internal/patch"
 )
@@ -13,35 +15,44 @@ import (
 // would result.
 //
 // The order matters: every check that can refuse runs before any output exists, so
-// a refusal cannot leave a file half-edited. On refusal the result still carries the
-// file as it stands, and carries the attempt itself when the refusal was about
-// content rather than about the anchor.
+// a refusal cannot leave a file half-edited. A refusal returns an empty Result and
+// puts what the model needs on the Refusal: the file as it stands, and the attempt
+// itself when the refusal was about content rather than about the anchor.
 func Apply(ctx context.Context, reads *anchor.Reads, p patch.Patch, current string, opts Options) (Result, error) {
-	res := Result{
-		Now: current,
-	}
 	if n, asked := len(p.Hunks), opts.hunks(); n > asked {
-		return res, refuse(
+		return Result{}, refused(refuse(
 			ReasonTooManyHunks,
 			"The reply carries %d changes and %d was asked for. Send only the change that was requested.",
 			n,
 			asked,
-		)
+		), "", current)
 	}
 	if _, err := Resolve(reads, p, current); err != nil {
-		return res, err
+		return Result{}, refused(err, "", current)
 	}
 
 	rows := open(current)
 	edited, err := splice(rows, p.Hunks, true)
-	if err == nil {
-		res.Text = render(edited)
-		res.Diff = diff(rows, edited, p.Hunks)
-		return res, nil
+	if err != nil {
+		return Result{}, refused(err, attempted(rows, p.Hunks), current)
 	}
+	return Result{Text: render(edited), Diff: diff(rows, edited, p.Hunks)}, nil
+}
 
-	res.Would = attempted(rows, p.Hunks)
-	return res, err
+// refused fills in what a refusal owes the model beyond its message.
+//
+// SWE-agent's ablation is the argument for both: without its own attempt the model
+// sends the same edit again, and without the current file it edits against a memory
+// four turns old. They live on the refusal rather than on the result because they
+// exist only when there is one, and a caller that ignores the error can then never
+// mistake a loose splice for a file to write.
+func refused(err error, refusedText, text string) error {
+	var r *Refusal
+	if errors.As(err, &r) {
+		r.RefusedText = refusedText
+		r.Text = text
+	}
+	return err
 }
 
 // attempted renders the edit the model asked for, ignoring whether the text it says
@@ -49,7 +60,7 @@ func Apply(ctx context.Context, reads *anchor.Reads, p patch.Patch, current stri
 // a re-send of the same edit.
 //
 // Empty when the hunks cannot be placed at all, because that is not an attempt at
-// anything: there is no line for the replacement to land on. Only reached after the
+// anything: there is no line for the replacement to sit on. Only reached after the
 // anchor resolved, so the file being spliced is the file the model read.
 func attempted(rows []row, hunks []patch.Hunk) string {
 	spliced, err := splice(rows, hunks, false)

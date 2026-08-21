@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/cockroachdb/errors"
 	"github.com/urfave/cli/v3"
 
 	"ratchet/internal/anchor"
 	"ratchet/internal/edit"
+	"ratchet/internal/executor/tool"
 	"ratchet/internal/patch"
 )
 
@@ -44,7 +46,7 @@ func readCmd() *cli.Command {
 func applyCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "apply",
-		Usage: "apply a patch to a file and print the result, without writing",
+		Usage: "apply a patch to a file and print the diff; --write saves it",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "file",
@@ -60,6 +62,10 @@ func applyCmd() *cli.Command {
 				Value: 1,
 				Usage: "how many changes were asked for",
 			},
+			&cli.BoolFlag{
+				Name:  "write",
+				Usage: "write the result to the file instead of only printing the diff",
+			},
 		},
 		Action: func(ctx context.Context, c *cli.Command) error {
 			return runApply(ctx, c, os.Stdin, os.Stdout)
@@ -71,11 +77,6 @@ func applyCmd() *cli.Command {
 // than a terminal.
 func runApply(ctx context.Context, c *cli.Command, in io.Reader, out io.Writer) error {
 	path := c.String("file")
-	file, err := os.ReadFile(path)
-	if err != nil {
-		return errors.Wrapf(err, "reading %s", path)
-	}
-
 	reply, err := patchText(c.String("patch"), in)
 	if err != nil {
 		return err
@@ -86,35 +87,57 @@ func runApply(ctx context.Context, c *cli.Command, in io.Reader, out io.Writer) 
 		return err
 	}
 
-	// This invocation is the read. There is no session to have issued an anchor, so
-	// the file being edited is the one being served, and the provenance check passes
-	// because it is this command that served it.
-	reads := anchor.NewReads()
-	reads.Record(p.Path, anchor.NewSnapshot(string(file)))
-
-	res, applyErr := edit.Apply(ctx, reads, *p, string(file), edit.Options{
-		MaxHunks: c.Int("max-hunks"),
-	})
-	if applyErr != nil {
-		return report(out, res, applyErr)
+	// One invocation is one session, so this reads the file it is about to edit and
+	// the provenance check passes because this session served it. The rule bites
+	// across turns, and a shell is not turns.
+	//
+	// The address is taken from --file rather than from the reply's header, because
+	// here the header holds whatever path the reader was given, absolute included,
+	// and a session resolves an address under its root. --file is what the person
+	// meant; the header says which file the model thought it was editing.
+	s := tool.NewSession(filepath.Dir(path))
+	p.Path = filepath.Base(path)
+	if _, err := s.Read(p.Path); err != nil {
+		return err
 	}
-	_, err = fmt.Fprint(out, res.Diff)
+
+	apply := s.Preview
+	if c.Bool("write") {
+		apply = s.Edit
+	}
+	res, applyErr := apply(ctx, *p, edit.Options{MaxHunks: c.Int("max-hunks")})
+	if applyErr != nil {
+		return report(out, applyErr)
+	}
+	_, err = fmt.Fprint(out, res.Edit.Diff)
 	return errors.Wrap(err, "printing the diff")
 }
 
-// report prints a refusal the way the applier hands it back: what is wrong, the file
-// as it stands, and the attempt itself when there was one.
+// report prints a refusal the way the applier hands it back: what is wrong, the
+// attempt itself when there was one, and the file as it stands.
 //
 // All three, because SWE-agent's ablation is the argument for all three. Without the
 // error the model misdiagnoses, without its own attempt it sends the same edit again,
 // and without the current file it edits against a memory four turns old.
-func report(out io.Writer, res edit.Result, cause error) error {
+//
+// Only a refusal is marked as reported. An edit that fails to write is a fault, and
+// suppressing its stack would lose which file operation failed.
+func report(out io.Writer, cause error) error {
+	var refusal *edit.Refusal
+	if !errors.As(cause, &refusal) {
+		return cause
+	}
 	if _, err := fmt.Fprintf(out, "refused: %v\n", cause); err != nil {
 		return errors.Wrap(err, "printing the refusal")
 	}
-	if res.Would != "" {
-		if _, err := fmt.Fprintf(out, "\nthe edit would have produced:\n%s", res.Would); err != nil {
+	if refusal.RefusedText != "" {
+		if _, err := fmt.Fprintf(out, "\nthe edit would have produced:\n%s", refusal.RefusedText); err != nil {
 			return errors.Wrap(err, "printing the attempt")
+		}
+	}
+	if refusal.Text != "" {
+		if _, err := fmt.Fprintf(out, "\nthe file as it stands:\n%s", refusal.Text); err != nil {
+			return errors.Wrap(err, "printing the file")
 		}
 	}
 	return errors.Mark(cause, errReported)

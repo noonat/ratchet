@@ -936,9 +936,16 @@ refusal in fifteen, and the edits it produced would have deleted a constructor's
 
 The rule is therefore about provenance and not about correctness: Ratchet
 records which anchors it handed out and for which lines, and an anchor that came
-from anywhere else is refused no matter what it matches. That check costs a
-lookup and closes the path by construction, where wording can only discourage
-it.
+from anywhere else is refused no matter what it matches.
+
+That record is the session, in `executor/tool`, and it is what makes the rule
+bite. Reads accumulate there across turns, so an anchor from three turns ago
+resolves and one the model composed does not. Held per call instead, it would
+only ever contain the file being edited, and every anchor would pass. A resolved
+edit records the file it just wrote and hands back its tag, because the write
+made the model's anchor stale and a loop with no live tag has to re-read to do
+anything. That check costs a lookup and closes the path by construction, where
+wording can only discourage it.
 
 The same reasoning applies one level down, to the lines within an accepted
 anchor. Ratchet records which lines a `read` actually displayed and refuses an
@@ -974,7 +981,8 @@ decision to the wrong place.
 
 `opts` carries what belongs to the request rather than to the patch language —
 how many changes were asked for, and whether a repair may run. `Result` carries
-the new text, the diff, and the file as it stands.
+the new text and the diff, and a refusal carries the file as it stands and the
+attempt that was refused.
 
 ```
   resolve anchor ─► apply in memory ─► validate ─► diff-filter ─► write

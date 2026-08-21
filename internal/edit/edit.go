@@ -94,6 +94,15 @@ type Refusal struct {
 	Reason Reason
 	// Message is what the model is shown.
 	Message string
+	// RefusedText is the file this edit would have produced, set when the edit was
+	// refused for what it said about content rather than for its anchor.
+	//
+	// An anchor refusal leaves it empty on purpose. Showing an attempt spliced into
+	// a file the model has not read is the same silent wrong-line edit the anchor
+	// exists to prevent, arriving through the rejection instead of through the edit.
+	RefusedText string
+	// Text is the file as it stands, which a refusal always carries.
+	Text string
 }
 
 // Error makes Refusal an error.
@@ -110,25 +119,16 @@ func refuse(reason Reason, format string, args ...any) error {
 	})
 }
 
-// Result is what an edit produced. Now is always set, so a refusal still hands
-// back the file the model should be looking at.
+// Result is what a resolved edit produced. A refusal returns none of it and carries
+// what the model needs on the Refusal instead.
 type Result struct {
-	// Text is the file after the edit, set only when the edit was applied.
+	// Text is the file the edit produced.
 	Text string
-	// Would is the text the edit would have produced, set only when the edit was
-	// refused for what it said about content rather than for its anchor.
-	//
-	// An anchor refusal leaves it empty on purpose. Showing an attempt spliced into
-	// a file the model has not read is the same silent wrong-line edit the anchor
-	// exists to prevent, arriving through the rejection instead of through the edit.
-	Would string
-	// Now is the file as it stands, always set.
-	Now string
-	// Diff is what changed, set only when the edit was applied.
+	// Diff is what changed, in the notation the model was asked to write in.
 	//
 	// Rendered here rather than left to the caller so that the tool reports what it
-	// did in the same notation the model was asked to write in, which is one format
-	// fewer for either of them to get wrong.
+	// did in the same notation the model wrote, which is one format fewer for either
+	// of them to get wrong.
 	Diff string
 }
 
