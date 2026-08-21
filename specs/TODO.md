@@ -8,6 +8,37 @@ Nothing here is committed to. There are no checkboxes on purpose: `backlog`
 reads a `##` heading containing checkboxes as an iteration, and this file must
 not become work it tracks.
 
+`Next` is the one ordered section. Everything below it is an unordered parking
+lot, which is what the rest of this file is for.
+
+## Next
+
+Ordered by what a mistake would cost to discover late, not by what has the best
+evidence behind it. Early on those are opposites, because evidence collects
+around what is already built, so ranking by evidence ranks the least risky work
+first. Specs already written are worked lowest number first, per the index.
+
+1. **A session that outlives one command: a read that records, and a write to
+   disk.** The applier is a library nothing calls. `Reads` is built in two
+   non-test places and both fill it with the file about to be edited, so the
+   provenance rule — the most measured decision in the applier — cannot fail in
+   any real path. It earns its keep when a read is three turns old.
+
+   The write question comes with it: atomic per file or per patch, and what
+   happens when a patch's second hunk fails validation after the first was
+   applied.
+
+2. **The agent loop, against a model host.** The first end-to-end path, and the
+   thing every downstream design decision is currently guessing about. The
+   refusal economics the whole design rests on have been measured in a research
+   harness and never in a loop this repo owns.
+
+3. **`ratchet qualify`.** Moves journal production into the repo, which
+   dissolves the journal-naming problem below rather than guarding it.
+
+4. **Failure injection**, per the list below. Needs a loop to inject into, so it
+   follows 2.
+
 ## Testing
 
 - Failure injection, per the architecture: `DropToolCall`, `TruncateAt`,
@@ -42,9 +73,6 @@ not become work it tracks.
 
 - Does an anchor need to survive a file being renamed? Today it does not, and a
   rename during an iteration would refuse every subsequent edit to that file.
-- Nothing yet writes to disk. When something does, decide whether a write is
-  atomic per file or per patch, and what happens when the second hunk of a patch
-  fails validation after the first was applied.
 
 ## Prose
 

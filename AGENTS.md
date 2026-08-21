@@ -11,14 +11,15 @@ into a manual stops being read, and the things in it stop being followed.
 
 ## Read this before
 
-| Doing                        | Read                                          |
-| ---------------------------- | --------------------------------------------- |
-| anything                     | [docs/conventions.md](docs/conventions.md)    |
-| changing how it is built     | [docs/architecture.md](docs/architecture.md)  |
-| changing what it does        | [docs/product.md](docs/product.md)            |
-| touching the applier         | [docs/edit-applier.md](docs/edit-applier.md)  |
-| picking up work              | [specs/](specs/), lowest open iteration first |
-| noting an idea, not doing it | [specs/TODO.md](specs/TODO.md)                |
+| Doing                        | Read                                            |
+| ---------------------------- | ----------------------------------------------- |
+| anything                     | [docs/conventions.md](docs/conventions.md)      |
+| changing how it is built     | [docs/architecture.md](docs/architecture.md)    |
+| changing what it does        | [docs/product.md](docs/product.md)              |
+| touching the applier         | [docs/edit-applier.md](docs/edit-applier.md)    |
+| picking up work              | [specs/](specs/), lowest open iteration first   |
+| choosing the next spec       | [specs/TODO.md](specs/TODO.md), the `Next` list |
+| noting an idea, not doing it | [specs/TODO.md](specs/TODO.md)                  |
 
 ## Rules that fit on one line
 
