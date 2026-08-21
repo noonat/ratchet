@@ -8,14 +8,6 @@ Nothing here is committed to. There are no checkboxes on purpose: `backlog`
 reads a `##` heading containing checkboxes as an iteration, and this file must
 not become work it tracks.
 
-## Edit applier
-
-- Similarity matching stays out, but a **near-miss report** might be worth it:
-  when a refused edit's old text differs from the file by whitespace alone, say
-  so in the refusal instead of leaving the model to guess. Measured evidence
-  exists that a diagnosed refusal is worth about 45% of a correct edit, and an
-  undiagnosed one much less.
-
 ## Testing
 
 - Failure injection, per the architecture: `DropToolCall`, `TruncateAt`,
@@ -39,12 +31,12 @@ not become work it tracks.
   have held up. A name that lasts says what varied: the models, the forms, the
   fixtures, the output cap.
 
-  Renaming is not free today. The fixtures header keys on the file name, so a
-  renamed journal reads as a new source while its records under the old name are
-  kept as an absent one, and the committed file silently doubles. Neither guard
-  catches it: the hashes are unchanged and the count grows rather than drops.
-  Detecting it is cheap, because the hash is already recorded. A present journal
-  whose hash matches an absent recorded source under another name is a rename.
+  Renaming is not free until the rename is a deliberate act. The fixtures header
+  keys on the file name, so a renamed journal reads as a new source while its
+  records under the old name are kept as an absent one, and the committed file
+  silently doubles. Neither existing guard catches it: the hashes are unchanged
+  and the count grows rather than drops. The guard is pulled up in spec **003**,
+  because the detection is one hash comparison the data is already there for.
 
 ## Open questions carried over
 
@@ -53,3 +45,17 @@ not become work it tracks.
 - Nothing yet writes to disk. When something does, decide whether a write is
   atomic per file or per patch, and what happens when the second hunk of a patch
   fails validation after the first was applied.
+
+## Prose
+
+- **`docs/edit-applier.md:44` spells British** — "the arithmetic favours
+  refusing" — on the line spec **002** now cites for the 45%. Worth folding into
+  whatever next touches that file.
+
+## What got pulled up and where
+
+- **The near-miss report.** Spec **002**
+- **The renamed-journal guard.** Spec **003**
+
+These stay here so a reader who does not know to ask for a spec number can find
+out what was done, by whom, and on what evidence.
