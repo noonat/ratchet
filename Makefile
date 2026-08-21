@@ -6,6 +6,9 @@
 
 GOFILES := $(shell find . -name '*.go' -not -path './vendor/*')
 PKGS    := ./...
+# Pinned, because a gate whose formatter floats reformats the repo on someone
+# else's release day. Bump it deliberately, then run `make fmt`.
+PRETTIER := prettier@3.9.6
 
 .DEFAULT_GOAL := help
 
@@ -23,8 +26,9 @@ clean: ## remove build output
 	rm -f ratchet
 
 .PHONY: fmt
-fmt: ## rewrite source with gofmt
+fmt: ## rewrite source with gofmt and prose with prettier
 	gofmt -w $(GOFILES)
+	npx --yes $(PRETTIER) --write "**/*.md"
 
 .PHONY: lint
 lint: ## gofmt, vet, staticcheck
@@ -46,12 +50,20 @@ lint: ## gofmt, vet, staticcheck
 	fi; \
 	rm -f go.mod.tidycheck go.sum.tidycheck
 
+.PHONY: prose
+prose: ## check markdown formatting
+	@command -v npx >/dev/null 2>&1 || { \
+		echo "npx not found; install node to check prose formatting"; \
+		exit 1; \
+	}
+	npx --yes $(PRETTIER) --check "**/*.md"
+
 .PHONY: test
 test: ## run the tests
 	go test $(PKGS)
 
 .PHONY: check
-check: build lint test ## build, lint, test — what a gate runs
+check: build lint prose test ## build, lint, prose, test — what a gate runs
 
 .PHONY: fixtures
 fixtures: ## rebuild testdata/fixtures.jsonl from journals/ (FORCE=1 to accept a change)
