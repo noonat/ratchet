@@ -77,6 +77,8 @@ func Rebuild(dir, path string, force bool) (*Set, error) {
 	}
 
 	next := &Set{}
+	seenRun := map[string]string{}
+	var runOrder []string
 	present := map[string]struct{}{}
 	for _, journal := range journals {
 		name := filepath.Base(journal)
@@ -93,6 +95,13 @@ func Rebuild(dir, path string, force bool) (*Set, error) {
 		sum, err := hashFile(journal)
 		if err != nil {
 			return nil, err
+		}
+		// A second name on the same content, which no other check can see: the hashes
+		// are unchanged, the counts only grow, and the totals only grow with them. It
+		// runs before the rescored check so the refusal that names the other journal
+		// wins over the one that only says this file moved.
+		if other, ok := findTwin(name, sum, old.Sources, runOrder, seenRun); ok {
+			return nil, refuseTwin(name, other, recorded, present, sum)
 		}
 		if was, seen := recorded[name]; seen && was.SHA256 != sum && !force {
 			return nil, refuse(
@@ -120,6 +129,8 @@ func Rebuild(dir, path string, force bool) (*Set, error) {
 			SHA256:  sum,
 			Records: len(records),
 		})
+		seenRun[name] = sum
+		runOrder = append(runOrder, name)
 		next.Records = append(next.Records, records...)
 	}
 
@@ -222,4 +233,73 @@ func refuse(format string, args ...any) error {
 	return errors.WithStack(&Refusal{
 		Reason: fmt.Sprintf(format, args...),
 	})
+}
+
+// findTwin finds another name holding the same content as the journal being rebuilt.
+//
+// Two passes, because the twin can be either already in the fixtures or merely
+// earlier in this run. The recorded pass catches a rename of, or a copy of, a
+// journal the file already holds. The same-run pass catches a copy of a journal
+// nothing has been rebuilt from yet, which every existing check waves through: its
+// hash matches no record, its count grows, and so does the total.
+//
+// The lowest name wins when several match, so the message does not depend on map
+// order. Under SHA-256 they are the same file, so which one is named is a matter of
+// being repeatable rather than of being right.
+func findTwin(name, sum string, sources []Source, runOrder []string, seenRun map[string]string) (string, bool) {
+	found := ""
+	for _, other := range sources {
+		if other.Journal == name || other.SHA256 != sum {
+			continue
+		}
+		if found == "" || other.Journal < found {
+			found = other.Journal
+		}
+	}
+	if found != "" {
+		return found, true
+	}
+	for _, earlier := range runOrder {
+		if seenRun[earlier] == sum {
+			return earlier, true
+		}
+	}
+	return "", false
+}
+
+// refuseTwin says which of the three states this is, and what to do about it.
+//
+// One fact selects the remedy: whether this name is already recorded under this very
+// hash. If it is, the committed file holds both names over one hash and the fix is
+// in the file. If it is not, the content is a copy, and the fix is on disk — remove
+// one of two present files, or put the copy back under the recorded name. A name
+// recorded under a different hash is the second case, not the first: the file then
+// holds two names over two hashes, which is a copy rather than a doubled header.
+//
+// force is not consulted. The other rebuild refusals exist because the evidence
+// under a named source genuinely changed and accepting that can be intended. Here
+// the evidence did not change, it is doubled, and the remedy is to remove the
+// duplicate rather than to record it twice.
+func refuseTwin(name, other string, recorded map[string]Source, present map[string]struct{}, sum string) error {
+	self, known := recorded[name]
+	if known && self.SHA256 == sum {
+		return refuse(
+			"the fixtures already hold %s and %s under one hash, so every reply they share is counted twice. Keep one name: remove the other's records and its source line, and its file if it is still there, then rebuild",
+			name,
+			other,
+		)
+	}
+	if _, alsoHere := present[other]; alsoHere {
+		return refuse(
+			"%s and %s are the same file, so keeping both counts every reply twice. Remove one of them, then rebuild",
+			name,
+			other,
+		)
+	}
+	return refuse(
+		"%s is a rename or a copy of %s, whose records the fixtures already hold, so keeping both counts every reply twice. Rename it to %s, or remove it, then rebuild",
+		name,
+		other,
+		other,
+	)
 }

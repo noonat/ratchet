@@ -97,7 +97,7 @@ func fixturesCmd() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:  "force",
-				Usage: "accept a rebuild the guards would otherwise refuse",
+				Usage: "accept journals that changed since the fixtures were built; duplicates are still refused",
 			},
 		},
 		Action: func(ctx context.Context, c *cli.Command) error {

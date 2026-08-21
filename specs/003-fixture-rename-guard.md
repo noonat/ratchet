@@ -1,7 +1,7 @@
 ---
-status: ready
+status: done
 created: 2026-08-20T21:05:00Z
-updated: 2026-08-21T02:31:19.11625994Z
+updated: 2026-08-21T06:08:25.274066909Z
 required_commands:
   - cmd: make check
 ---
@@ -99,53 +99,57 @@ Files: `internal/dev/fixture/distill.go` (the check in `Rebuild`),
 in the neighboring `fixture_test.go` — plus the two `Superseded` loop tests),
 and the `--force` usage line in `cmd/ratchet-dev/main.go`.
 
-- [ ] In the `Rebuild` loop, after hashing a journal present, compare its hash
+- [x] In the `Rebuild` loop, after hashing a journal present, compare its hash
       against (a) the recorded hash of every _other_ recorded source and (b) the
       hash of the journals earlier in the same run; when one matches, refuse,
       before the same-named hash-change check
-- [ ] The refusal names both journals and says keeping both counts every reply
+- [x] The refusal names both journals and says keeping both counts every reply
       twice. Which remedy follows is selected by whether the present name is
       recorded under this hash
-- [ ] Present name recorded under this hash, another name recorded under it too:
+- [x] Present name recorded under this hash, another name recorded under it too:
       remove the other's records and its source line, and its file if it is
       still present
-- [ ] Present name not recorded under this hash, other name present: remove one
+- [x] Present name not recorded under this hash, other name present: remove one
       of the two files
-- [ ] Present name not recorded under this hash, other name absent: rename to
+- [x] Present name not recorded under this hash, other name absent: rename to
       the recorded name, or remove the file
-- [ ] `FORCE=1` does not override this refusal, in any of its three cases. The
+- [x] `FORCE=1` does not override this refusal, in any of its three cases. The
       `force` parameter is ignored for this one; leave it doing what it does for
       the other four
-- [ ] Table test: a journal under a new name with the same content as a recorded
+- [x] Table test: a journal under a new name with the same content as a recorded
       source is refused, names the recorded name, and offers the
       rename-or-remove remedy. With `force` true it is still refused
-- [ ] Two new journals with identical content, neither recorded, are refused and
+- [x] Two new journals with identical content, neither recorded, are refused and
       name both, with the remove-one-file remedy — the adjacent case a
       present-against-recorded comparison alone misses
-- [ ] A file that already holds two sources under one hash, rebuilt with one of
+- [x] A file that already holds two sources under one hash, rebuilt with one of
       the two names present, is refused with the remove-the-duplicate remedy.
       With `force` true it is still refused
-- [ ] The same content under two names, both present, one recorded under that
+- [x] The same content under two names, both present, one recorded under that
       hash and the other not, is refused and names both, with the
       remove-one-file remedy
-- [ ] A journal with genuinely new content is not refused, and the merge keeps
+- [x] A journal with genuinely new content is not refused, and the merge keeps
       both sources' records
-- [ ] A journal recorded under a _different_ hash whose hash also matches the
+- [x] A journal recorded under a _different_ hash whose hash also matches the
       one another source is recorded under — the case that pins the order
       against the rescored check — is the named-journal refusal with the
       rename-or-remove remedy. The assertion is on the remedy text and not only
       the name, since naming does not separate the branches from each other
-- [ ] In the two `Superseded` loop tests, vary the journal row by name, so a
+- [x] In the two `Superseded` loop tests, vary the journal row by name, so a
       second entry in the list is not an identical pair
-- [ ] Run the rename test before changing `Rebuild` and see it fail: the rebuild
+- [x] Run the rename test before changing `Rebuild` and see it fail: the rebuild
       should currently succeed with the records doubled, which is the corruption
       this iteration removes
-- [ ] `cmd/ratchet-dev/main.go`'s `--force` usage line becomes one that names
+- [x] `cmd/ratchet-dev/main.go`'s `--force` usage line becomes one that names
       what it accepts — the rescored, superseded, shrink, and total-backstop
       refusals — since the named-journal refusal does not accept it
-- [ ] `TestWriteIsReproducible` and the existing `Rebuild` tests pass, except
+- [x] `TestWriteIsReproducible` and the existing `Rebuild` tests pass, except
       the two `Superseded` loops, which now vary their row
 
 **Gate:** `make check`
+
+> **Completed** 2026-08-21 06:08 UTC
+>
+> - `make check` — 1.3s
 
 ## Where this plan was departed from
