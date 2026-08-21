@@ -467,5 +467,13 @@ the author had already rejected.
 wherever a command can prove it. Reserve an ack for what only a person can
 assert.
 
+**Judgment.** A todo is one outcome somebody can verify. The checkbox is the
+only part of a spec that survives as state rather than prose, so a box holding
+six test cases cannot record that four of them are written, and `[/]` on it
+tells a resuming reader nothing. The shape to watch for is a box enumerating a
+set: two of them in a drafted spec ran to 218 and 192 words, one listing every
+test case and the other every remedy branch, while every other box in the same
+file sat near thirty.
+
 **Enforced by `backlog`.** Iterations close in order, and an iteration's
 `required_commands` must pass before it closes.
