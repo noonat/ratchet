@@ -401,3 +401,41 @@ func TestRebuildRefusesEveryShapeOfADuplicate(t *testing.T) {
 		})
 	}
 }
+
+// TestTheRemedyDoesNotDependOnSortOrder pins what the incremental build of the
+// present set broke. A copy whose name sorts before the journal it duplicates was
+// told to rename itself over the recorded name, which is the one instruction that
+// destroys evidence: if the recorded journal has since been rescored, renaming over
+// it replaces the new content with the old.
+func TestTheRemedyDoesNotDependOnSortOrder(t *testing.T) {
+	cases := []struct {
+		name     string
+		recorded string
+		copied   string
+	}{
+		{name: "the copy sorts after the recorded name", recorded: "edit-aaa.jsonl", copied: "edit-zzz.jsonl"},
+		{name: "the copy sorts before it", recorded: "edit-zzz.jsonl", copied: "edit-aaa.jsonl"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			g := NewWithT(t)
+			dir := t.TempDir()
+			journals := filepath.Join(dir, "journals")
+			g.Expect(os.Mkdir(journals, 0o750)).To(Succeed())
+			path := filepath.Join(dir, "fixtures.jsonl")
+			rows := []string{row(g, "sub_diff", "game", 1, "a", "b", "r1", "correct")}
+
+			journal(g, journals, c.recorded, rows)
+			_, err := build(g, journals, path, false)
+			g.Expect(err).NotTo(HaveOccurred())
+			journal(g, journals, c.copied, rows)
+
+			_, err = Rebuild(journals, path, false)
+
+			g.Expect(err).To(HaveOccurred())
+			g.Expect(err.Error()).To(ContainSubstring("Remove one of them"), "both files are on disk, whichever way the names sort")
+			g.Expect(err.Error()).NotTo(ContainSubstring("Rename it to"), "renaming over a recorded journal is how its evidence is lost")
+		})
+	}
+}

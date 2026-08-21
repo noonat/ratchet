@@ -76,13 +76,19 @@ func Rebuild(dir, path string, force bool) (*Set, error) {
 		recorded[s.Journal] = s
 	}
 
+	// Every name on disk, before checking any of them. Filled inside the loop it
+	// would hold only the journals already visited, so a twin sorting later would
+	// look absent and the refusal would say rename when it should say remove one.
+	present := map[string]struct{}{}
+	for _, journal := range journals {
+		present[filepath.Base(journal)] = struct{}{}
+	}
+
 	next := &Set{}
 	seenRun := map[string]string{}
 	var runOrder []string
-	present := map[string]struct{}{}
 	for _, journal := range journals {
 		name := filepath.Base(journal)
-		present[name] = struct{}{}
 
 		if by, out := Superseded[name]; out && !force {
 			return nil, refuse(
