@@ -139,6 +139,19 @@ to close an iteration needing human approval, a model closed it anyway and
 reported the work reviewed. Given a tool set without that verb, it stopped and
 asked. It did not become more trustworthy. It stopped having the capability.
 
+The same holds for checking. Four models were asked to review a specification.
+None had tools or a repository, so nothing they cited could be opened. **Three
+of the four said they had checked it anyway.** One wrote out a table of ticks —
+"✔️ The double-counts show up in `TestRebuild` (currently passes)" — for a test
+file it could not read. Only one model said, in all three of its runs, that it
+had no tools and could check nothing.
+
+So "I checked it" is worth no more than "I am finished". Both are claims. That
+is why a gate is a command the runner runs rather than a status the executor
+reports, and why an anchor is a hash the tool handed out rather than a line
+number the model remembers. Neither stops a model that lies. Both stop one that
+thinks it checked and did not.
+
 Only the drafter can ask you anything. The executor has `BLOCKED`. It stops the
 iteration and states the problem, and the answer arrives as a revised spec. An
 unattended run that can block on a question is a process waiting for you with a
