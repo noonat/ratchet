@@ -157,6 +157,29 @@ iteration and states the problem, and the answer arrives as a revised spec. An
 unattended run that can block on a question is a process waiting for you with a
 20GB model loaded and a laptop that will sleep.
 
+### A draft is reviewed in a fresh session
+
+The drafter writes a spec over many turns, asking questions and revising. It
+does not review that spec in the same session. The draft is frozen, a new
+session starts, and the finished text goes to it with no history and no
+repository.
+
+This comes from a measurement. A local model drafted a spec, then reviewed its
+own work three times over in the same session. Two real defects survived all
+three rounds. The same model, handed the finished text cold in a new session,
+**found both** — one defect in each of two runs, and described them better than
+the specification did.
+
+Three other models read the same text cold and found neither. So changing the
+model does not help. Changing the session does.
+
+Why it helps is a guess, and worth marking as one: a fresh reader has not spent
+an hour agreeing with the text as it was written, and it reads what is on the
+page rather than what it remembers deciding.
+
+The evidence is thin — one model, one defect found per run. It is cheap enough
+to do anyway: one extra session, and none of your time.
+
 ## The spec
 
 A spec is a markdown document, in your repo, in version control, readable in
