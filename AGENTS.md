@@ -28,7 +28,7 @@ into a manual stops being read, and the things in it stop being followed.
 - Make every new gate fail on purpose once before trusting a pass from it.
 - Never commit or push without asking. Approval of one commit is not approval of
   the next.
-- A commit body says why, not what. Draft it, review it, then ask.
+- A commit body says why, not what, in a few sentences. Draft, review, then ask.
 - A design doc describes the target. When the code contradicts it, correct the
   doc; the spec is where a departure from the plan is recorded.
 - Cite the measurement, not the file path: paths outside this repo will break.

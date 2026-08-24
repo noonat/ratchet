@@ -16,6 +16,15 @@ bodies.
 
 **Get to the point.** Never use two words where one will do.
 
+**A commit body is a few sentences.** Name the problem, and the constraint or
+the tradeoff where there is one. Stop.
+
+The reasons behind single decisions belong in doc comments and code comments,
+beside the code, where the next reader meets them anyway. A commit that repeats
+them keeps two copies of one explanation, and length buries the one thing only a
+commit can say. A body here went from 230 words to 47 with nothing lost, because
+every sentence cut was already written on the function it described.
+
 **American spelling.** normalize, not normalise. behavior, color, judgment,
 license, center. Quoted text keeps whatever the source wrote.
 
