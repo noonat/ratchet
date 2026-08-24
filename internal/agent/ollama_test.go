@@ -129,7 +129,7 @@ func TestASilentStreamIsAbandoned(t *testing.T) {
 // fires, and the caller reads a zero as a real allocation. A whole run recorded a
 // context of zero with nothing noticing.
 func TestAllocatedFindsAModelHoweverItIsTagged(t *testing.T) {
-	vectors := []struct {
+	cases := []struct {
 		name   string
 		loaded string
 		ask    string
@@ -158,22 +158,22 @@ func TestAllocatedFindsAModelHoweverItIsTagged(t *testing.T) {
 		},
 	}
 
-	for _, v := range vectors {
-		t.Run(v.name, func(t *testing.T) {
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
 			g := NewWithT(t)
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintf(w, `{"models":[%s]}`, v.loaded)
+				fmt.Fprintf(w, `{"models":[%s]}`, c.loaded)
 			}))
 			defer srv.Close()
 			o := NewOllama(strings.TrimPrefix(srv.URL, "http://"))
 
-			got, err := o.Allocated(t.Context(), v.ask)
-			if !v.wantOK {
+			got, err := o.Allocated(t.Context(), c.ask)
+			if !c.wantOK {
 				g.Expect(err).To(HaveOccurred(), "an unloaded model must not report a context")
 				return
 			}
 			g.Expect(err).NotTo(HaveOccurred())
-			g.Expect(got).To(Equal(v.want))
+			g.Expect(got).To(Equal(c.want))
 		})
 	}
 }
@@ -182,7 +182,7 @@ func TestAllocatedFindsAModelHoweverItIsTagged(t *testing.T) {
 // was not given. The shortfall otherwise surfaces later as the model forgetting
 // the file it just read.
 func TestRequireContextRefusesAShortfall(t *testing.T) {
-	vectors := []struct {
+	cases := []struct {
 		name    string
 		have    int
 		need    int
@@ -194,16 +194,16 @@ func TestRequireContextRefusesAShortfall(t *testing.T) {
 		{name: "not loaded", have: 0, need: 20480, wantErr: "not loaded"},
 	}
 
-	for _, v := range vectors {
-		t.Run(v.name, func(t *testing.T) {
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
 			g := NewWithT(t)
-			err := RequireContext(t.Context(), &Script{Context: v.have}, "m", v.need)
-			if v.wantErr == "" {
+			err := RequireContext(t.Context(), &Script{Context: c.have}, "m", c.need)
+			if c.wantErr == "" {
 				g.Expect(err).NotTo(HaveOccurred())
 				return
 			}
 			g.Expect(err).To(HaveOccurred())
-			g.Expect(err.Error()).To(ContainSubstring(v.wantErr))
+			g.Expect(err.Error()).To(ContainSubstring(c.wantErr))
 		})
 	}
 }
@@ -242,7 +242,7 @@ func TestTheRequestCarriesWhatWasAskedFor(t *testing.T) {
 // of colons and carries no port, so the naive check leaves it alone and the URL
 // built from it does not parse.
 func TestAnAddressGetsAPortWithoutBreakingIPv6(t *testing.T) {
-	vectors := []struct {
+	cases := []struct {
 		name string
 		in   string
 		want string
@@ -256,10 +256,10 @@ func TestAnAddressGetsAPortWithoutBreakingIPv6(t *testing.T) {
 		{name: "a full IPv6", in: "fd7a:115c:a1e0::1", want: "[fd7a:115c:a1e0::1]:11434"},
 	}
 
-	for _, v := range vectors {
-		t.Run(v.name, func(t *testing.T) {
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(withPort(v.in, ollamaPort)).To(Equal(v.want))
+			g.Expect(withPort(c.in, ollamaPort)).To(Equal(c.want))
 		})
 	}
 }

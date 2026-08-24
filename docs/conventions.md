@@ -341,7 +341,7 @@ inside the closure, so it satisfies that rule while breaking this one.
 literal inside the `range`, and its rows name their fields, one per line:
 
 ```go
-vectors := []struct {
+cases := []struct {
     name string
     in   string
     want string
@@ -353,7 +353,7 @@ vectors := []struct {
     },
 }
 
-for _, v := range vectors {
+for _, c := range cases {
     ...
 }
 ```
@@ -361,6 +361,11 @@ for _, v := range vectors {
 An inline table puts the data between `range` and the loop body, so reading the
 loop means reading past the whole table. Positional fields stop being readable
 past two of them, and adding a field silently reassigns every existing value.
+
+The table is `cases`. `vectors` is cryptography vocabulary and belongs to rows
+pinned against another implementation, which `internal/anchor` has and nothing
+else does. It spread from there into three files by way of this example, which
+used to name it that.
 
 The struct type is declared **inline**, as above, rather than as a named type. A
 table is common enough that a named row type costs a lookup and buys nothing,

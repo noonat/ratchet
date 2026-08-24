@@ -96,11 +96,15 @@ which models. Those need this to exist first.
 
 ## Iteration 2: the tools the executor is given
 
-- [ ] `read`, `edit`, `done` and `blocked` as dispatchable tools over the
+- [x] `read`, `edit`, `done` and `blocked` as dispatchable tools over the
       existing session, each advertising a strict JSON Schema
-- [ ] `execute` accepts the permissive union and says which spelling it accepted
-- [ ] Two calls in one reply is a protocol error naming both
-- [ ] Every existing refusal reaches the model as the tool's result, unedited
+- [x] `execute` accepts the permissive union and says which spelling it accepted
+- [x] Two calls in one reply is a protocol error naming both
+- [x] Every existing refusal reaches the model as the tool's result, unedited
+
+> **Completed** 2026-08-24 08:57 UTC
+>
+> - `make check` — 1.5s
 
 ## Iteration 3: the loop
 
@@ -113,3 +117,16 @@ which models. Those need this to exist first.
       what happened
 
 ## Where this plan was departed from
+
+**`edit` takes the patch as text, not the four arguments the design names.** The
+design writes it `edit(path, anchor, end?, text)`, which has no room for the
+text being replaced. Stating the old row is what took corruption from 75 in 400
+to 2, and the refusals this spec exists to pipe through are the ones the parser
+and the applier produce against that notation. So the tool takes the section
+header and hunks as written, and the parser and applier are reused whole rather
+than reimplemented over structured arguments.
+
+**Dispatch lives in `internal/agent` and the tools in
+`internal/executor/tool`.** The loop holds a `Dispatcher` interface, and the
+seat's tools implement it, so the loop never learns which seat it is running and
+neither package imports the other in a circle.
