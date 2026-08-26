@@ -871,7 +871,7 @@ satisfy.
 | Tool                             | Note                                                   |
 | -------------------------------- | ------------------------------------------------------ |
 | `read(path)`                     | scoped to the repo; returns a tagged, numbered listing |
-| `edit(path, tag, line, end?, text)` | file tag plus line numbers, not exact-match strings |
+| `edit(patch)`                    | one patch citing the file's tag and the rows it replaces |
 | `write(path, text)`              | whole file; only for files in the iteration's list     |
 | `bash(cmd)`                      | defanged environment; no pagers, progress bars, color |
 | `revert_file(path)`              | restores one file to its iteration-start state         |

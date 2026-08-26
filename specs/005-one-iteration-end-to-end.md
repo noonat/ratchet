@@ -1,7 +1,7 @@
 ---
-status: active
+status: done
 created: 2026-08-22T00:00:00Z
-updated: 2026-08-24T06:24:37.327966998Z
+updated: 2026-08-26T03:27:56.061702715Z
 required_commands:
   - cmd: make check
 ---
@@ -108,15 +108,173 @@ which models. Those need this to exist first.
 
 ## Iteration 3: the loop
 
-- [ ] One iteration, one attempt: assemble the prompt, stream, dispatch one
+- [x] One iteration, one attempt: assemble the prompt, stream, dispatch one
       call, append the result, repeat until terminal
-- [ ] `done` and `blocked` are the only terminal verbs, and both are named in
+- [x] `done` and `blocked` are the only terminal verbs, and both are named in
       every failure message the executor sees
-- [ ] A tool error is a turn; a protocol failure ends the iteration and says why
-- [ ] Run it against a host, on a spec iteration that edits one file, and record
+- [x] A tool error is a turn; a protocol failure ends the iteration and says why
+- [x] Run it against a host, on a spec iteration that edits one file, and record
       what happened
 
+> **Completed** 2026-08-25 06:08 UTC
+>
+> - `make check` — 1.4s
+
+## Iteration 4: carry what a reply arrives with
+
+The loop keeps a reply's text and its tool calls and discards everything else.
+Two defects follow.
+
+A reasoning model that hits the output cap returns empty text, no tool calls,
+and a stop reason of `length`. The loop reports "the reply carried no tool
+call", which blames the model's tool-call format for a truncation. `ollama.go`
+keeps `Thinking` for this case and `Message` has nowhere to put it, so it is
+dropped one line later.
+
+The last-turn warning is written and never sent. `result` computes
+`left = max - turn` for the turn that just ran, so the `left == 0` branch fires
+on the final turn, whose tool result is appended after the loop ends. Nothing
+follows it. The model's actual last turn is told "1 turns left", which is also
+the wrong plural.
+
+- [x] Add `Thinking` and `Done` to `agent.Message` and set them where the
+      assistant turn is appended, so the journal holds what arrived rather than
+      what parsed
+- [x] When a reply carries no tool call and the stop reason is `length`, say the
+      reply hit the cap and give the cap
+- [x] Fire the last-turn warning when one turn remains, so it reaches the model
+      while it can still act, and make the count read correctly at one
+- [x] Break both: a reply with `Done: "length"` and empty text must not report a
+      missing tool call, and a four-turn run must deliver the last-turn warning
+      as the fourth turn's input
+
+> **Completed** 2026-08-25 07:12 UTC
+>
+> - `make check` — 1.4s
+
+## Iteration 5: make an unusable argument cost a turn, not the run
+
+`Execute`'s doc comment states the rule: a refused call is an Outcome because
+the model gets another turn, and an error means another turn would not help.
+Argument handling does the opposite.
+
+`text` returns an error when it finds no spelling it recognises, `Execute`
+passes it up, and the loop ends the run. A model that finishes the work and
+calls `done` with no summary therefore loses the run, and finished work is
+recorded as a protocol failure. Another turn would fix it: the model is told
+what is missing and calls again.
+
+`text` also commits to the first key that is present rather than the first that
+holds a value. Given `{"path": null, "file_path": "a.ts"}` it fails on `path`
+and never tries the spelling carrying the value. Hosts produce that shape when
+they fill declared-but-unset arguments.
+
+- [x] Fall through to the next spelling when a value is present and unusable,
+      and report a failure only when no spelling yields a string
+- [x] Return a missing or unusable argument as an Outcome naming what was wanted
+      and what arrived
+- [x] Keep an unknown tool name an error, because no turn makes it exist
+- [x] Break both: `done` with empty arguments must cost one turn and not the
+      run, and `{"path": null, "file_path": "a.ts"}` must read the file
+
+> **Completed** 2026-08-25 15:02 UTC
+>
+> - `make check` — 1.5s
+
+## Iteration 6: enforce the file list the prompt promises
+
+`System`'s doc comment states the rule: every rule in the prompt is one the
+tools enforce anyway. `Task` breaks it. It tells the model which files it may
+touch, and nothing checks. `NewSession` fences to a root, the file list never
+reaches it, and a model editing a different file under that root is told
+`applied.`
+
+The architecture already names the refusal this should produce:
+`E_FILE_NOT_ALLOWED`, the path is not in this iteration's files.
+
+- [x] Give `NewSession` the iteration's file list alongside the root. An empty
+      list means the whole root, so existing callers keep their behaviour
+- [x] Refuse a read or an edit outside the list, in the wording the
+      architecture's error table gives
+- [x] Return that refusal as the tool's result, so it costs one turn and not the
+      run
+- [x] Break it: a session given one file must refuse a read of its sibling, and
+      the same session with an empty list must serve both
+
+> **Completed** 2026-08-25 15:13 UTC
+>
+> - `make check` — 1.4s
+
+## Iteration 7: remove every reference to a private network
+
+This repository will be public. It names a machine on a private network in four
+places and carries two addresses from a private tailnet.
+
+| Where                                     | What                             |
+| ----------------------------------------- | -------------------------------- |
+| `cmd/ratchet-dev/drive.go`                | `--host` defaults to a host name |
+| `internal/agent/ollama_test.go`           | that host name, twice            |
+| `internal/agent/ollama_test.go`           | a tailnet IPv6 prefix            |
+| `docs/product.md`, `docs/architecture.md` | a second host name, three times  |
+| `docs/architecture.md`                    | a tailnet IPv4 address           |
+
+`--host` loses its default. A default naming one machine is wrong in a public
+repository, and this particular name resolves to an interface measured as the
+one that drops. Anyone wanting a default has an environment variable or a config
+file.
+
+Replacements come from the ranges reserved for documentation, so nothing
+resolves and no reader mistakes an example for a real host: RFC 5737 for IPv4,
+RFC 3849 for IPv6, and a generic word for a host name.
+
+- [x] Make `--host` required with no default, and say in its usage where a
+      person keeps one
+- [x] Replace every host name and address in code, tests and docs, keeping each
+      test's meaning: the IPv6 case still needs a bare address with no port to
+      exercise the bracketing
+- [x] Add a check under `internal/convention` that fails on a private or tailnet
+      address, or on either host name, anywhere in the repository
+- [x] Break it: reintroduce one address and watch the check fail
+
+> **Completed** 2026-08-26 03:23 UTC
+>
+> - `make check` — 1.4s
+
+## Iteration 8: make the spec agree with the code
+
+- [x] Correct the departure note that says the context check is unfixed. The
+      same change set fixes it both ways the note proposed, and a reader trusts
+      the spec over a comment
+- [x] Change `runDrive` to take an `io.Writer` rather than an `*os.File`,
+      matching every sibling command, so its output can be captured
+- [x] Add a test that drives `runDrive` against the scripted provider and
+      asserts the transcript names each turn
+- [x] Re-read the spec against the code and record anywhere else they disagree
+
+> **Completed** 2026-08-26 03:27 UTC
+>
+> - `make check` — 1.4s
+
 ## Where this plan was departed from
+
+**The decision to check `Allocated` before the first turn is reversed.** A host
+lists what it gave a model only once it holds one, so the check written to
+refuse too little context refused every model that had not already been used
+instead, and the live run below needed one warmed by hand. The check now runs
+after the first turn, which is the request that loads the model, and
+`ErrNotLoaded` separates a host that is not holding the model from a host that
+gave it too little. `docs/architecture.md` said the read happens before starting
+and now says when it happens and why.
+
+**The live run passed on the first attempt, and exercised only the happy path.**
+Three turns: read, one `SUB` patch citing the tag from that read, `done` with an
+accurate summary. The file on disk holds the change. No refusal, no protocol
+error and no retry occurred, so the parts built to handle a model's mistakes are
+still untested against a real model.
+
+**The model chose a longer fragment than the prompt taught.** The prompt's `SUB`
+example replaces a bare identifier; the model sent `-function midpoint` rather
+than `-midpoint`. That is the safer choice and the prompt did not ask for it.
 
 **`edit` takes the patch as text, not the four arguments the design names.** The
 design writes it `edit(path, anchor, end?, text)`, which has no room for the
@@ -130,3 +288,8 @@ than reimplemented over structured arguments.
 `internal/executor/tool`.** The loop holds a `Dispatcher` interface, and the
 seat's tools implement it, so the loop never learns which seat it is running and
 neither package imports the other in a circle.
+
+**The Provider sketch in the design named a shape the code never had.**
+`docs/architecture.md` gave `Stream` a channel of events and an error; it takes
+a callback and returns the reply. Corrected in the doc, because a design doc
+describes the target and this described one abandoned before the code existed.

@@ -403,7 +403,7 @@ they carry.
 
 ```go
 type Provider interface {
-    Stream(context.Context, Request) (<-chan Event, error)
+    Stream(context.Context, Request, func(Event)) (Reply, error)
     Allocated(context.Context, string) (contextWindow int, err error)
 }
 ```
@@ -411,9 +411,14 @@ type Provider interface {
 `Allocated` exists because of a measured lie. Ollama's OpenAI-compatible
 `/v1/chat/completions` silently discards `options.num_ctx`, so a model asked for
 48k loads at the server default of 4096 and nothing reports it. Ratchet speaks
-Ollama's native `/api/chat` and reads the real allocation from `/api/ps` before
-starting. `min_executor_context_window` is checked against that number, not the
-one we asked for.
+Ollama's native `/api/chat` and reads the real allocation from `/api/ps`.
+`min_executor_context_window` is checked against that number, not the one we
+asked for.
+
+The read happens after the first turn, not before it. A host lists what it gave
+a model only once it holds one, so asking first refuses every model that has not
+already been used and says nothing about the case the check exists for. One turn
+is the price of a question that has no answer before it.
 
 Implementations: `ollama`, `openai` for anything OpenAI-shaped including
 mlx-openai-server and vLLM, and `anthropic`. They are compiled in rather than
@@ -598,7 +603,7 @@ calls whose intent is unambiguous.
 
 ```
 read(path)                        → line, "#", hash, ":", text  per line
-edit(path, anchor, end?, text)    → applied
+edit(patch)                       → applied, and the file's new tag
 write(path, text)                 → applied
 bash(cmd)                         → {output: capped 10k head+tail, exit: int}
 revert_file(path)                 → restored to the iteration-start snapshot
@@ -612,6 +617,12 @@ blocked(reason)                   → terminal. stops the iteration
 | `E_FILE_NOT_FOUND`   | read, edit, revert        | it is allowed and does not exist              |
 | `E_ANCHOR_MISMATCH`  | edit                      | the hash does not match; see the two branches |
 | `E_EDIT_REJECTED`    | edit                      | the result failed validation; nothing applied |
+
+`edit` takes the patch as text rather than the path, anchor and replacement as
+separate arguments, because separate arguments have no room for the row being
+replaced. Stating the old row is what took corruption from 75 in 400 to 2, and
+the refusals the applier produces are written against that notation. Both seats
+share the applier, so both spell the tool the same way.
 
 Codes read `E_<subject>_<condition>`, so the subject comes first, and
 `NOT_ALLOWED` says what happened rather than naming the field it happened to.
@@ -628,7 +639,7 @@ grep(pattern, glob?)              → matches with paths and line numbers
 index(query?)                     → the repo snapshot, or one answer from it
 bash(cmd)                         → {output: capped, exit: int}
 write(path, content)              → applied
-edit(path, anchor, end?, text)    → applied
+edit(patch)                       → applied, and the file's new tag
 ask(question, iteration?)         → the answer text, or ErrUnanswered
 choose(options[], iteration?)     → Choice, or ErrUnanswered
 decide(statement, from?)          → recorded. never waits
