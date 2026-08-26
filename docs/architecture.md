@@ -263,8 +263,8 @@ Each differs between a laptop and a GPU box while the spec stays the same.
 ```json
 {
   "container_engine": "podman",
-  "executor": "glm-4.7-flash@block",
-  "listen": "100.92.194.77:7000",
+  "executor": "glm-4.7-flash@gpu",
+  "listen": "192.0.2.10:7000",
   "notify": { "kind": "telegram", "chat": "…" }
 }
 ```
@@ -1217,7 +1217,7 @@ $ ratchet doctor
             ⚠ registry reached via HTTPS_PROXY; a process ignoring it is not stopped
   image     ratchet-exec:node22    present · git absent · sha256:4c1e…
   mount     /repo                  writable as uid 1000
-  models    glm-4.7-flash@block    49152 allocated (asked 49152)
+  models    glm-4.7-flash@gpu    49152 allocated (asked 49152)
 ```
 
 The warning line is the point. A sandbox that silently provides less than this

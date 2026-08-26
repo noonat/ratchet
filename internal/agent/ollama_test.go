@@ -247,13 +247,13 @@ func TestAnAddressGetsAPortWithoutBreakingIPv6(t *testing.T) {
 		in   string
 		want string
 	}{
-		{name: "a host with no port", in: "thor", want: "thor:11434"},
-		{name: "a host with a port", in: "thor:1234", want: "thor:1234"},
-		{name: "an IPv4 with no port", in: "10.0.0.1", want: "10.0.0.1:11434"},
-		{name: "an IPv4 with a port", in: "10.0.0.1:1234", want: "10.0.0.1:1234"},
+		{name: "a host with no port", in: "gpu", want: "gpu:11434"},
+		{name: "a host with a port", in: "gpu:1234", want: "gpu:1234"},
+		{name: "an IPv4 with no port", in: "192.0.2.1", want: "192.0.2.1:11434"},
+		{name: "an IPv4 with a port", in: "192.0.2.1:1234", want: "192.0.2.1:1234"},
 		{name: "a bare IPv6", in: "::1", want: "[::1]:11434"},
 		{name: "a bracketed IPv6 with a port", in: "[::1]:1234", want: "[::1]:1234"},
-		{name: "a full IPv6", in: "fd7a:115c:a1e0::1", want: "[fd7a:115c:a1e0::1]:11434"},
+		{name: "a full IPv6", in: "2001:db8::1", want: "[2001:db8::1]:11434"},
 	}
 
 	for _, c := range cases {

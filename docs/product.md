@@ -289,7 +289,7 @@ At the bottom of the spec, written by Ratchet, never edited.
 | when             | event     | by      | detail                      |
 | ---------------- | --------- | ------- | --------------------------- |
 | 2026-08-16 09:14 | ready     | human   | spec sha256:8f3c1ab         |
-| 2026-08-16 09:15 | started   | ratchet | glm-4.7-flash@block         |
+| 2026-08-16 09:15 | started   | ratchet | glm-4.7-flash@gpu           |
 | 2026-08-16 15:42 | completed | ratchet | 11 of 11 · npm run smoke ok |
 ```
 
@@ -654,7 +654,7 @@ You approved it, then edited an iteration.
 #### Running it
 
 ```
-$ ratchet run 001 --executor glm-4.7-flash@block
+$ ratchet run 001 --executor glm-4.7-flash@gpu
 ```
 
 Then you leave. What you get while you are gone is short notifications on
