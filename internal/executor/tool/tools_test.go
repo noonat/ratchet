@@ -2,6 +2,8 @@ package tool
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -110,10 +112,10 @@ func TestTheTerminalVerbsAreTheOnlyWayToStop(t *testing.T) {
 // away a turn; taking it quietly teaches the wrong spelling.
 func TestASpellingTheSchemaDidNotAdvertiseIsTakenAndNamed(t *testing.T) {
 	cases := []struct {
-		name        string
-		args        map[string]any
-		wantWidened bool
-		wantErr     string
+		name          string
+		args          map[string]any
+		wantWidened   bool
+		wantComplaint string
 	}{
 		{
 			name: "the advertised spelling",
@@ -130,14 +132,19 @@ func TestASpellingTheSchemaDidNotAdvertiseIsTakenAndNamed(t *testing.T) {
 			wantWidened: false,
 		},
 		{
-			name:    "two values, which is a batch and has no form",
-			args:    map[string]any{"path": []any{"a.ts", "b.ts"}},
-			wantErr: "2 values where one was declared",
+			name:          "two values, which is a batch and has no form",
+			args:          map[string]any{"path": []any{"a.ts", "b.ts"}},
+			wantComplaint: "no usable path",
 		},
 		{
-			name:    "no path at all",
-			args:    map[string]any{"file": nil},
-			wantErr: "where a string was declared",
+			name:          "no path at all",
+			args:          map[string]any{"file": nil},
+			wantComplaint: "no usable path",
+		},
+		{
+			name:        "a null under the advertised name, the value under another",
+			args:        map[string]any{"path": nil, "file_path": "a.ts"},
+			wantWidened: true,
 		},
 	}
 
@@ -146,12 +153,12 @@ func TestASpellingTheSchemaDidNotAdvertiseIsTakenAndNamed(t *testing.T) {
 			g := NewWithT(t)
 			_, s := write(g, t, "a.ts", "one\n")
 			got, err := NewTools(s).Execute(t.Context(), call("read", c.args))
-			if c.wantErr != "" {
-				g.Expect(err).To(HaveOccurred())
-				g.Expect(err.Error()).To(ContainSubstring(c.wantErr))
+			g.Expect(err).NotTo(HaveOccurred(), "a bad argument is a turn, not a failure")
+			if c.wantComplaint != "" {
+				g.Expect(got.Text).To(ContainSubstring(c.wantComplaint))
+				g.Expect(got.Stop).To(Equal(agent.StopNone))
 				return
 			}
-			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(got.Text).To(ContainSubstring("1:one"))
 			if c.wantWidened {
 				g.Expect(got.Widened).NotTo(BeEmpty(), "the model has to be told which spelling to use")
@@ -213,4 +220,77 @@ func TestTheToolListReadsAsProse(t *testing.T) {
 			g.Expect(list(c.in)).To(Equal(c.want))
 		})
 	}
+}
+
+// TestFinishedWorkIsNotLostToAMissingArgument is the defect this iteration
+// fixes.
+//
+// A model that has done the work and calls done without a summary used to end the
+// run: the missing argument came back as an error, the loop read that as a
+// protocol failure, and finished work was recorded as one. Another turn plainly
+// fixes it, so the complaint is the tool's result and the model answers it.
+func TestFinishedWorkIsNotLostToAMissingArgument(t *testing.T) {
+	cases := []struct {
+		name string
+		call agent.ToolCall
+		want string
+	}{
+		{
+			name: "done with nothing at all",
+			call: call("done", map[string]any{}),
+			want: "no arguments",
+		},
+		{
+			name: "done under a name nobody advertised",
+			call: call("done", map[string]any{"note": "renamed it"}),
+			want: "the call carried note",
+		},
+		{
+			name: "blocked with no reason",
+			call: call("blocked", map[string]any{}),
+			want: "no usable reason",
+		},
+		{
+			name: "edit with no patch",
+			call: call("edit", map[string]any{"path": "a.ts"}),
+			want: "no usable patch",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			g := NewWithT(t)
+			_, s := write(g, t, "a.ts", "one\n")
+			got, err := NewTools(s).Execute(t.Context(), c.call)
+
+			g.Expect(err).NotTo(HaveOccurred(), "another turn fixes this, so it is not an error")
+			g.Expect(got.Text).To(ContainSubstring(c.want))
+			g.Expect(got.Stop).To(Equal(agent.StopNone), "and it does not end the iteration")
+		})
+	}
+}
+
+// TestAnUnknownToolStaysAnError keeps the other half of the contract. No turn
+// makes a tool exist, so offering another one wastes it.
+func TestAnUnknownToolStaysAnError(t *testing.T) {
+	g := NewWithT(t)
+	_, s := write(g, t, "a.ts", "one\n")
+	_, err := NewTools(s).Execute(t.Context(), call("write", map[string]any{"path": "a.ts"}))
+	g.Expect(err).To(HaveOccurred())
+}
+
+// TestARefusedPathCostsATurnNotTheRun ties the allowlist to iteration 5's rule.
+// A path outside the iteration is a refusal the model can answer, so it arrives
+// as the tool's result.
+func TestARefusedPathCostsATurnNotTheRun(t *testing.T) {
+	g := NewWithT(t)
+	root, _ := write(g, t, "a.ts", "one\n")
+	g.Expect(os.WriteFile(filepath.Join(root, "b.ts"), []byte("x\n"), 0o644)).To(Succeed())
+
+	got, err := NewTools(NewSession(root, "a.ts")).
+		Execute(t.Context(), call("read", map[string]any{"path": "b.ts"}))
+
+	g.Expect(err).NotTo(HaveOccurred(), "the model can answer this, so it is not a failure")
+	g.Expect(got.Text).To(ContainSubstring("not in this iteration's files"))
+	g.Expect(got.Stop).To(Equal(agent.StopNone))
 }

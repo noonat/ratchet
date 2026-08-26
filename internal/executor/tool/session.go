@@ -12,6 +12,8 @@ package tool
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -28,18 +30,50 @@ import (
 // it, and a Reads built per call can only ever hold the file being edited.
 type Session struct {
 	root  string
+	files map[string]struct{}
 	reads *anchor.Reads
 }
 
-// NewSession starts a session over a directory.
-func NewSession(root string) *Session {
-	return &Session{root: root, reads: anchor.NewReads()}
+// NewSession starts a session over a directory, limited to the files an iteration
+// names.
+//
+// An empty list means the whole root. The prompt tells a model which files it may
+// touch, and until the list reached here that was a promise nothing kept: a model
+// editing a different file under the root was told the edit applied.
+func NewSession(root string, files ...string) *Session {
+	allowed := map[string]struct{}{}
+	for _, f := range files {
+		allowed[filepath.Clean(f)] = struct{}{}
+	}
+	return &Session{root: root, files: allowed, reads: anchor.NewReads()}
+}
+
+// allow reports whether a path is one this iteration named.
+//
+// The wording comes from the architecture's error table, where this refusal is
+// E_FILE_NOT_ALLOWED: the path is not in this iteration's files.
+func (s *Session) allow(path string) error {
+	if len(s.files) == 0 {
+		return nil
+	}
+	if _, ok := s.files[filepath.Clean(path)]; ok {
+		return nil
+	}
+	named := make([]string, 0, len(s.files))
+	for f := range s.files {
+		named = append(named, f)
+	}
+	sort.Strings(named)
+	return errors.Newf("%s is not in this iteration's files: %s", path, strings.Join(named, ", "))
 }
 
 // Read renders a file the way a model is shown one: a tagged header, then numbered
 // lines. It records what it served, so an edit some turns later can resolve against
 // this read rather than against the file as it stands.
 func (s *Session) Read(path string) (string, error) {
+	if err := s.allow(path); err != nil {
+		return "", err
+	}
 	text, err := s.load(path)
 	if err != nil {
 		return "", err
@@ -66,6 +100,11 @@ func (s *Session) Preview(ctx context.Context, p patch.Patch, opts edit.Options)
 }
 
 func (s *Session) apply(ctx context.Context, p patch.Patch, opts edit.Options, write bool) (Result, error) {
+	// Checked before the applier runs, so a path outside the iteration is refused
+	// on the same grounds whether the edit would have resolved or not.
+	if err := s.allow(p.Path); err != nil {
+		return Result{}, err
+	}
 	text, err := s.load(p.Path)
 	if err != nil {
 		return Result{}, err

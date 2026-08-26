@@ -283,3 +283,51 @@ func TestReadServesWholeFiles(t *testing.T) {
 		g.Expect(listing).To(ContainSubstring(line), "line %d is displayed", i+1)
 	}
 }
+
+// TestAFileTheIterationDidNotNameIsRefused is the promise the prompt made and
+// nothing kept.
+//
+// `Task` tells the model which files it may touch. Until the list reached the
+// session, a model editing a different file under the root was told the edit
+// applied, so an iteration could write outside its declared scope and report
+// success. The wording is the architecture's: the path is not in this
+// iteration's files.
+func TestAFileTheIterationDidNotNameIsRefused(t *testing.T) {
+	g := NewWithT(t)
+	const text = "one\ntwo\nthree\n"
+	root, _ := write(g, t, "a.ts", text)
+	g.Expect(os.WriteFile(filepath.Join(root, "b.ts"), []byte(text), 0o644)).To(Succeed())
+
+	scoped := NewSession(root, "a.ts")
+
+	_, err := scoped.Read("a.ts")
+	g.Expect(err).NotTo(HaveOccurred(), "the file the iteration named is served")
+
+	_, err = scoped.Read("b.ts")
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(err.Error()).To(ContainSubstring("not in this iteration's files"))
+	g.Expect(err.Error()).To(ContainSubstring("a.ts"), "the refusal names what is allowed")
+
+	// An edit is refused on the same grounds, before the applier runs, so the
+	// answer does not depend on whether the patch would have resolved.
+	_, err = scoped.Edit(t.Context(), put(text, "b.ts", 2, "two", "2"), edit.Options{})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(err.Error()).To(ContainSubstring("not in this iteration's files"))
+
+	after, readErr := os.ReadFile(filepath.Join(root, "b.ts"))
+	g.Expect(readErr).NotTo(HaveOccurred())
+	g.Expect(string(after)).To(Equal(text), "and nothing was written")
+}
+
+// TestAnEmptySessionServesTheWholeRoot keeps every existing caller working. A
+// session given no list is the behaviour that shipped before this.
+func TestAnEmptySessionServesTheWholeRoot(t *testing.T) {
+	g := NewWithT(t)
+	root, open := write(g, t, "a.ts", "one\n")
+	g.Expect(os.WriteFile(filepath.Join(root, "b.ts"), []byte("x\n"), 0o644)).To(Succeed())
+
+	_, err := open.Read("a.ts")
+	g.Expect(err).NotTo(HaveOccurred())
+	_, err = open.Read("b.ts")
+	g.Expect(err).NotTo(HaveOccurred())
+}

@@ -3,6 +3,7 @@ package tool
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -79,9 +80,9 @@ func (t *Tools) Tools() []agent.Tool {
 func (t *Tools) Execute(ctx context.Context, call agent.ToolCall) (agent.Outcome, error) {
 	switch call.Name {
 	case NameRead:
-		path, widened, err := text(call.Args, "path", "file_path", "file")
-		if err != nil {
-			return agent.Outcome{}, err
+		path, widened, complaint := text(call.Args, "path", "file_path", "file")
+		if complaint != "" {
+			return agent.Outcome{Text: complaint}, nil
 		}
 		out, err := t.session.Read(path)
 		if err != nil {
@@ -90,9 +91,9 @@ func (t *Tools) Execute(ctx context.Context, call agent.ToolCall) (agent.Outcome
 		return agent.Outcome{Text: out, Widened: widened}, nil
 
 	case NameEdit:
-		body, widened, err := text(call.Args, "patch", "text", "edit", "content")
-		if err != nil {
-			return agent.Outcome{}, err
+		body, widened, complaint := text(call.Args, "patch", "text", "edit", "content")
+		if complaint != "" {
+			return agent.Outcome{Text: complaint}, nil
 		}
 		p, err := patch.Parse(body)
 		if err != nil {
@@ -108,16 +109,16 @@ func (t *Tools) Execute(ctx context.Context, call agent.ToolCall) (agent.Outcome
 		}, nil
 
 	case NameDone:
-		said, widened, err := text(call.Args, "summary", "message", "text")
-		if err != nil {
-			return agent.Outcome{}, err
+		said, widened, complaint := text(call.Args, "summary", "message", "text")
+		if complaint != "" {
+			return agent.Outcome{Text: complaint}, nil
 		}
 		return agent.Outcome{Text: "recorded", Stop: agent.StopDone, Said: said, Widened: widened}, nil
 
 	case NameBlocked:
-		said, widened, err := text(call.Args, "reason", "message", "text")
-		if err != nil {
-			return agent.Outcome{}, err
+		said, widened, complaint := text(call.Args, "reason", "message", "text")
+		if complaint != "" {
+			return agent.Outcome{Text: complaint}, nil
 		}
 		return agent.Outcome{Text: "recorded", Stop: agent.StopBlocked, Said: said, Widened: widened}, nil
 
@@ -130,7 +131,12 @@ func (t *Tools) Execute(ctx context.Context, call agent.ToolCall) (agent.Outcome
 
 // text takes a string argument under the advertised name or a spelling a model
 // reaches for instead, and says which it took.
-func text(args map[string]any, want string, also ...string) (string, []string, error) {
+//
+// A complaint rather than an error, because the model gets another turn and a
+// missing argument is what another turn fixes. Returning an error here ended the
+// run, so a model that finished the work and called done without a summary lost
+// it, and the finished work was recorded as a protocol failure.
+func text(args map[string]any, want string, also ...string) (value string, widened []string, complaint string) {
 	names := append([]string{want}, also...)
 	for _, name := range names {
 		v, ok := args[name]
@@ -139,14 +145,38 @@ func text(args map[string]any, want string, also ...string) (string, []string, e
 		}
 		s, err := asString(v)
 		if err != nil {
-			return "", nil, errors.Wrapf(err, "the %s argument", name)
+			// Present and unusable is not an answer. A host that fills a declared
+			// argument it was given no value for sends `{"path": null,
+			// "file_path": "a.ts"}`, and stopping at the first key present would
+			// never reach the one holding the value.
+			continue
 		}
 		if name == want {
-			return s, nil, nil
+			return s, nil, ""
 		}
-		return s, []string{fmt.Sprintf("%s was given as %s", want, name)}, nil
+		return s, []string{fmt.Sprintf("%s was given as %s", want, name)}, ""
 	}
-	return "", nil, errors.Newf("no %s argument; it is required", want)
+	complaint = fmt.Sprintf(
+		"no usable %s. it takes %s as a string, and the call carried %s.",
+		want,
+		want,
+		arrived(args),
+	)
+	return "", nil, complaint
+}
+
+// arrived lists the argument names a call carried, so a complaint says what was
+// sent as well as what was wanted.
+func arrived(args map[string]any) string {
+	if len(args) == 0 {
+		return "no arguments"
+	}
+	names := make([]string, 0, len(args))
+	for name := range args {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return list(names)
 }
 
 // asString widens the shapes a string arrives as.
