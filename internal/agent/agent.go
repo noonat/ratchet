@@ -40,6 +40,14 @@ type Message struct {
 	ToolCalls []ToolCall
 	// ToolName names the call a tool result answers.
 	ToolName string
+	// Thinking is the reasoning the reply carried, kept because a reply that
+	// spent its whole budget on it arrives with empty text and is otherwise
+	// indistinguishable from a model that answered nothing.
+	Thinking string
+	// Done is the host's reason for stopping, such as stop or length. A turn that
+	// stopped at the cap is a different failure from a turn that answered badly,
+	// and only this says which.
+	Done string
 }
 
 // Tool is a call advertised to the model.

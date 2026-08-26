@@ -152,6 +152,13 @@ func (o *Ollama) Stream(ctx context.Context, req Request, on func(Event)) (Reply
 	return reply, nil
 }
 
+// ErrNotLoaded means the host is not holding the model, so what it was given
+// cannot be read yet.
+//
+// Distinct from being given too little, because the answers differ: too little
+// is a refusal, and not yet loaded is a question asked too early.
+var ErrNotLoaded = errors.New("not loaded")
+
 // Allocated reports the context the host actually gave a model, from the list of
 // what is loaded.
 //
@@ -177,7 +184,7 @@ func (o *Ollama) Allocated(ctx context.Context, model string) (int, error) {
 			return m.ContextLength, nil
 		}
 	}
-	return 0, errors.Newf("%s is not loaded on %s", model, o.Addr)
+	return 0, errors.Wrapf(ErrNotLoaded, "%s on %s", model, o.Addr)
 }
 
 // RequireContext refuses a run whose host gave the model less room than the work
@@ -185,8 +192,15 @@ func (o *Ollama) Allocated(ctx context.Context, model string) (int, error) {
 //
 // A loop that starts anyway is measuring a context it does not have, and the
 // shortfall surfaces later as the model forgetting the file it just read.
+//
+// Ask this after a turn has run, not before. A host reports what it gave a model
+// only once it holds one, so asking first refuses every cold model and answers
+// nothing about the one case the check exists for.
 func RequireContext(ctx context.Context, p Provider, model string, need int) error {
 	got, err := p.Allocated(ctx, model)
+	if errors.Is(err, ErrNotLoaded) {
+		return errors.Wrapf(err, "%s answered but the host is not holding it, so what it was given cannot be read", model)
+	}
 	if err != nil {
 		return errors.Wrapf(err, "checking the context given to %s", model)
 	}

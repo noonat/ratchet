@@ -82,6 +82,7 @@ func command() *cli.Command {
 		Usage: "tooling for working on ratchet, run from the repository root",
 		Commands: []*cli.Command{
 			applyCmd(),
+			driveCmd(),
 			fixturesCmd(),
 			readCmd(),
 			replayCmd(),
